@@ -74,7 +74,7 @@ namespace kinova
         bool use_KinovaInK_;
 
         // check some process if success.
-        bool result_;
+        moveit::planning_interface::MoveItErrorCode result_;
         // wait for user input to continue: cin >> pause_;
         std::string pause_;
         std::string robot_type_;
@@ -99,8 +99,10 @@ namespace kinova
         geometry_msgs::PoseStamped pregrasp_pose_;
         geometry_msgs::PoseStamped postgrasp_pose_;
 
-
+    public:
         void build_workscene();
+        void build_actSimScene();
+
         void add_obstacle();
         void add_complex_obstacle();
         void clear_obstacle();
@@ -120,7 +122,8 @@ namespace kinova
         void get_current_state(const sensor_msgs::JointStateConstPtr &msg);
         void get_current_pose(const geometry_msgs::PoseStampedConstPtr &msg);
         // TODO: use Kinova inverse kinematic solution instead of from ROS.
-        void getInvK(geometry_msgs::Pose &eef_pose, std::vector<double> &joint_value);
+        void getInvK(geometry_msgs::Pose &eef_posee, std::vector<double> &joint_values);
+        void getForK(std::vector<double> &joint_value, geometry_msgs::Pose &m);
         void check_collision();
         void evaluate_plan(moveit::planning_interface::MoveGroup &group);
         bool gripper_action(double gripper_rad);

@@ -10,7 +10,7 @@ find_package(catkin REQUIRED
              COMPONENTS
              moveit_core
              moveit_ros_planning
-             moveit_ros_planning_interface
+             moveit_ros_planning_interface   
              pluginlib
              cmake_modules
              geometric_shapes
@@ -51,16 +51,22 @@ add_executable(work_scene src/work_scene.cpp)
 target_link_libraries(work_scene ${catkin_LIBRARIES} ${Boost_LIBRARIES} ${kinova_driver_LIBRARIES})
 install(TARGETS work_scene DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 
-add_executable(pick_place src/pick_place.cpp include/pick_place.h)
-target_link_libraries(pick_place ${catkin_LIBRARIES} ${Boost_LIBRARIES} ${kinova_driver_LIBRARIES})
-install(TARGETS pick_place DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
+#add_executable(pick_place src/pick_place.cpp include/pick_place.h)
+#target_link_libraries(pick_place ${catkin_LIBRARIES} ${Boost_LIBRARIES} ${kinova_driver_LIBRARIES})
+#install(TARGETS pick_place DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 
 add_executable(test_accuracy src/test_accuracy.cpp include/test_accuracy.h)
 target_link_libraries(test_accuracy ${catkin_LIBRARIES} ${Boost_LIBRARIES} ${kinova_driver_LIBRARIES})
 install(TARGETS test_accuracy DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 
-
+#test example added by hekai
+add_executable(basicControl src/basicControl.cpp src/pick_place.cpp include/pick_place.h )
+target_link_libraries(basicControl ${catkin_LIBRARIES} ${Boost_LIBRARIES} ${kinova_driver_LIBRARIES})
+install(TARGETS basicControl DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 #get_cmake_property(_variableNames VARIABLES)
 #foreach (_variableName ${_variableNames})
 #    message(STATUS "${_variableName}=${${_variableName}}")
 #endforeach()
+add_executable(cartesianPlan src/cartesianPlan.cpp)
+target_link_libraries(cartesianPlan ${catkin_LIBRARIES} ${Boost_LIBRARIES} ${kinova_driver_LIBRARIES})
+install(TARGETS cartesianPlan DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})

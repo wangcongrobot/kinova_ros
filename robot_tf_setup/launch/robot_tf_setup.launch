@@ -1,0 +1,4 @@
+<launch>
+<arg name="robot_name" default="j2n6s300">
+<node pkg="tf" type="static_transform_publisher" name="bhand_frame_broadcaster" args="0 0 0.125 0 0 0 1 $(arg robot_name)_link_6  bhand_grasp_frame 50" />
+</launch>

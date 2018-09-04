@@ -1,0 +1,43 @@
+<robot
+  name="hollowPrism">
+  <link
+    name="hollowPrism">
+    <inertial>
+      <origin
+        xyz="1.1626E-17 -0.04 -3.42387872923552E-17"
+        rpy="0 0 0" />
+      <mass
+        value="0.15" />
+      <inertia
+        ixx="0.0001790625"
+        ixy="-1.58112816820803E-20"
+        ixz="2.74041134113818E-21"
+        iyy="0.000198125"
+        iyz="-1.16720293098696E-21"
+        izz="0.0001790625" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="1.5707963267949 0 0" />
+      <geometry>
+        <mesh
+          filename="package://hollowPrism/meshes/hollowPrism.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="1 1 1 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="1.5707963267949 0 0" />
+      <geometry>
+        <mesh
+          filename="package://hollowPrism/meshes/hollowPrism.STL" />
+      </geometry>
+    </collision>
+  </link>
+</robot>

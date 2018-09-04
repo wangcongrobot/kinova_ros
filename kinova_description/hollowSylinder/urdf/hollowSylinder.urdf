@@ -1,0 +1,43 @@
+<robot
+  name="hollowSylinder">
+  <link
+    name="hollowSylinder">
+    <inertial>
+      <origin
+        xyz="2.7655E-18 -0.04 2.44921270764475E-18"
+        rpy="0 0 0" />
+      <mass
+        value="0.47124" />
+      <inertia
+        ixx="0.0011849694790259"
+        ixy="-9.36973616733145E-36"
+        ixz="8.7831931911809E-36"
+        iyy="0.00186728413347744"
+        iyz="-4.17783430573734E-20"
+        izz="0.0011849694790259" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="1.5707963267949 0 0" />
+      <geometry>
+        <mesh
+          filename="package://hollowSylinder/meshes/hollowSylinder.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="1 1 1 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="1.5707963267949 0 0" />
+      <geometry>
+        <mesh
+          filename="package://hollowSylinder/meshes/hollowSylinder.STL" />
+      </geometry>
+    </collision>
+  </link>
+</robot>

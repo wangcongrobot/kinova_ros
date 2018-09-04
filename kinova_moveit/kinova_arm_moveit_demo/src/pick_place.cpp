@@ -1,7 +1,38 @@
 #include <pick_place.h>
 #include <ros/console.h>
+#include <eigen_conversions/eigen_msg.h>
+#include <tf_conversions/tf_eigen.h>
+
+// #include <moveit/move_group_interface/move_group_interface.h>
 
 #include <tf_conversions/tf_eigen.h>
+
+#include <geometry_msgs/Pose.h>
+#include <moveit_msgs/CollisionObject.h>
+#include <shape_msgs/SolidPrimitive.h>
+#include <geometric_shapes/shape_operations.h>
+#include <geometric_shapes/mesh_operations.h>
+#include <geometric_shapes/solid_primitive_dims.h>
+#include <boost/variant.hpp>
+#include <boost/shared_ptr.hpp>
+
+#include <moveit/robot_model_loader/robot_model_loader.h>
+#include <moveit/robot_state/robot_state.h>
+#include <moveit/robot_state/conversions.h>
+
+#include <moveit/planning_interface/planning_interface.h>
+#include <moveit/planning_scene/planning_scene.h>
+#include <moveit/planning_scene_monitor/planning_scene_monitor.h>
+#include <moveit/planning_pipeline/planning_pipeline.h>
+
+#include <moveit/kinematic_constraints/utils.h>
+
+#include <moveit_msgs/PlanningScene.h>
+#include <moveit_msgs/AttachedCollisionObject.h>
+#include <moveit_msgs/GetStateValidity.h>
+#include <moveit_msgs/DisplayRobotState.h>
+#include <moveit_msgs/ApplyPlanningScene.h>
+#include <moveit_msgs/DisplayTrajectory.h>
 
 const double FINGER_MAX = 6400;
 
@@ -47,7 +78,7 @@ PickPlace::PickPlace(ros::NodeHandle &nh):
 
     // Before we can load the planner, we need two objects, a RobotModel and a PlanningScene.
     robot_model_loader::RobotModelLoader robot_model_loader("robot_description");
-    robot_model_ = robot_model_loader.getModel();
+    robot_model_ = robot_model_loader.getModel();//kinematic model
 
     // construct a `PlanningScene` that maintains the state of the world (including the robot).
     planning_scene_.reset(new planning_scene::PlanningScene(robot_model_));
@@ -86,7 +117,7 @@ PickPlace::PickPlace(ros::NodeHandle &nh):
 
     // pick process
     result_ = false;
-    my_pick();
+    //my_pick();
 }
 
 
@@ -175,10 +206,10 @@ void PickPlace::clear_workscene()
     co_.operation = moveit_msgs::CollisionObject::REMOVE;
     pub_co_.publish(co_);
 
-    // remove target
-    co_.id = "target_cylinder";
-    co_.operation = moveit_msgs::CollisionObject::REMOVE;
-    pub_co_.publish(co_);
+    // // remove target
+    // co_.id = "target_cylinder";
+    // co_.operation = moveit_msgs::CollisionObject::REMOVE;
+    // pub_co_.publish(co_);
 
     //remove attached target
     aco_.object.operation = moveit_msgs::CollisionObject::REMOVE;
@@ -218,7 +249,167 @@ void PickPlace::build_workscene()
     planning_scene_msg_.world.collision_objects.push_back(co_);
     planning_scene_msg_.is_diff = true;
     pub_planning_scene_diff_.publish(planning_scene_msg_);
-    ros::WallDuration(0.1).sleep();}
+    ros::WallDuration(0.1).sleep();
+}
+
+void PickPlace::build_actSimScene()
+{  
+    //remove target_object
+    co_.id = "hollowPrism";
+    co_.operation = moveit_msgs::CollisionObject::REMOVE;
+    pub_co_.publish(co_);
+
+    //add hollowPrism
+    co_.primitives.resize(1);
+    co_.primitive_poses.resize(1);
+    co_.operation = moveit_msgs::CollisionObject::ADD;
+
+    shapes::Mesh* hollowPrism_shape = shapes::createMeshFromResource("package://kinova_description/meshes/hollowPrism.STL");
+    shapes::ShapeMsg hollowPrism_mesh_msg;
+    shapes::constructMsgFromShape(hollowPrism_shape, hollowPrism_mesh_msg);
+    shape_msgs::Mesh hollowPrism_mesh = boost::get<shape_msgs::Mesh>(hollowPrism_mesh_msg);
+
+    geometry_msgs::Pose prismPose;
+    prismPose.position.x = 0.4;
+    prismPose.position.y = -0.3;
+    prismPose.position.z = 0.0;
+    prismPose.orientation.w = 1.0;
+
+    co_.meshes.push_back(hollowPrism_mesh);
+    co_.mesh_poses.push_back(prismPose);
+    can_pose_.pose.position.x = co_.primitive_poses[0].position.x;
+    can_pose_.pose.position.y = co_.primitive_poses[0].position.y;
+    can_pose_.pose.position.z = co_.primitive_poses[0].position.z;
+    
+    pub_co_.publish(co_);
+    planning_scene_msg_.world.collision_objects.push_back(co_);
+    planning_scene_msg_.is_diff = true;
+    pub_planning_scene_diff_.publish(planning_scene_msg_); 
+
+    //add prism
+    co_.id = "prism";
+    co_.operation = moveit_msgs::CollisionObject::REMOVE;
+    pub_co_.publish(co_);
+
+    co_.primitives.resize(1);
+    co_.primitive_poses.resize(1);
+    co_.primitives[0].type = shape_msgs::SolidPrimitive::BOX;
+    co_.primitives[0].dimensions.resize(geometric_shapes::SolidPrimitiveDimCount<shape_msgs::SolidPrimitive::BOX>::value);
+    co_.operation = moveit_msgs::CollisionObject::ADD;
+
+    co_.primitives[0].dimensions[shape_msgs::SolidPrimitive::BOX_X] = 0.05;
+    co_.primitives[0].dimensions[shape_msgs::SolidPrimitive::BOX_Y] = 0.05;
+    co_.primitives[0].dimensions[shape_msgs::SolidPrimitive::BOX_Z] = 0.20;
+    co_.primitive_poses[0].position.x = 0.2;
+    co_.primitive_poses[0].position.y = -0.3;
+    co_.primitive_poses[0].position.z = 0.1;
+    pub_co_.publish(co_);
+    planning_scene_msg_.world.collision_objects.push_back(co_);
+    planning_scene_msg_.is_diff = true;
+    pub_planning_scene_diff_.publish(planning_scene_msg_);   
+
+    //add hollow sylinder
+    //remove target_object
+    co_.id = "hollowsylinder";
+    co_.operation = moveit_msgs::CollisionObject::REMOVE;
+    pub_co_.publish(co_);
+
+    //add hollowPrism
+    co_.primitives.resize(1);
+    co_.primitive_poses.resize(1);
+    co_.operation = moveit_msgs::CollisionObject::ADD;
+
+    shapes::Mesh* hollowSylinder_shape = shapes::createMeshFromResource("package://kinova_description/meshes/hollowSylinder.STL");
+    shapes::ShapeMsg hollowSylinder_mesh_msg;
+    shapes::constructMsgFromShape(hollowSylinder_shape, hollowSylinder_mesh_msg);
+    shape_msgs::Mesh hollowSylinder_mesh = boost::get<shape_msgs::Mesh>(hollowSylinder_mesh_msg);
+
+    geometry_msgs::Pose sylinderPose;
+    sylinderPose.position.x = -0.2;
+    sylinderPose.position.y = -0.3;
+    sylinderPose.position.z = 0.00;
+    sylinderPose.orientation.w = 1.0;
+
+    co_.meshes.push_back(hollowSylinder_mesh);
+    co_.mesh_poses.push_back(sylinderPose);
+    can_pose_.pose.position.x = co_.primitive_poses[0].position.x;
+    can_pose_.pose.position.y = co_.primitive_poses[0].position.y;
+    can_pose_.pose.position.z = co_.primitive_poses[0].position.z;
+    
+    pub_co_.publish(co_);
+    planning_scene_msg_.world.collision_objects.push_back(co_);
+    planning_scene_msg_.is_diff = true;
+    pub_planning_scene_diff_.publish(planning_scene_msg_);
+
+    //remove cylinder
+    co_.id = "cylinder";
+    co_.operation = moveit_msgs::CollisionObject::REMOVE;
+    pub_co_.publish(co_);
+
+    //add cylinder
+    co_.primitives.resize(1);
+    co_.primitive_poses.resize(1);
+    co_.primitives[0].type = shape_msgs::SolidPrimitive::CYLINDER;
+    co_.primitives[0].dimensions.resize(geometric_shapes::SolidPrimitiveDimCount<shape_msgs::SolidPrimitive::CYLINDER>::value);
+    co_.operation = moveit_msgs::CollisionObject::ADD;
+
+    co_.primitives[0].dimensions[shape_msgs::SolidPrimitive::CYLINDER_HEIGHT] = 0.2;
+    co_.primitives[0].dimensions[shape_msgs::SolidPrimitive::CYLINDER_RADIUS] = 0.05;
+    co_.primitive_poses[0].position.x = 0.0;
+    co_.primitive_poses[0].position.y = -0.3;
+    co_.primitive_poses[0].position.z = 0.1;
+    can_pose_.pose.position.x = co_.primitive_poses[0].position.x;
+    can_pose_.pose.position.y = co_.primitive_poses[0].position.y;
+    can_pose_.pose.position.z = co_.primitive_poses[0].position.z;
+    pub_co_.publish(co_);
+    planning_scene_msg_.world.collision_objects.push_back(co_);
+    planning_scene_msg_.is_diff = true;
+    pub_planning_scene_diff_.publish(planning_scene_msg_);
+
+    //add prism
+    co_.id = "cube1";
+    co_.operation = moveit_msgs::CollisionObject::REMOVE;
+    pub_co_.publish(co_);
+
+    co_.primitives.resize(1);
+    co_.primitive_poses.resize(1);
+    co_.primitives[0].type = shape_msgs::SolidPrimitive::BOX;
+    co_.primitives[0].dimensions.resize(geometric_shapes::SolidPrimitiveDimCount<shape_msgs::SolidPrimitive::BOX>::value);
+    co_.operation = moveit_msgs::CollisionObject::ADD;
+
+    co_.primitives[0].dimensions[shape_msgs::SolidPrimitive::BOX_X] = 0.05;
+    co_.primitives[0].dimensions[shape_msgs::SolidPrimitive::BOX_Y] = 0.05;
+    co_.primitives[0].dimensions[shape_msgs::SolidPrimitive::BOX_Z] = 0.05;
+    co_.primitive_poses[0].position.x = -0.35;
+    co_.primitive_poses[0].position.y = -0.25;
+    co_.primitive_poses[0].position.z = 0.05;
+    pub_co_.publish(co_);
+    planning_scene_msg_.world.collision_objects.push_back(co_);
+    planning_scene_msg_.is_diff = true;
+    pub_planning_scene_diff_.publish(planning_scene_msg_);
+
+    co_.id = "cube2";
+    co_.operation = moveit_msgs::CollisionObject::REMOVE;
+    pub_co_.publish(co_);
+
+    co_.primitives.resize(1);
+    co_.primitive_poses.resize(1);
+    co_.primitives[0].type = shape_msgs::SolidPrimitive::BOX;
+    co_.primitives[0].dimensions.resize(geometric_shapes::SolidPrimitiveDimCount<shape_msgs::SolidPrimitive::BOX>::value);
+    co_.operation = moveit_msgs::CollisionObject::ADD;
+
+    co_.primitives[0].dimensions[shape_msgs::SolidPrimitive::BOX_X] = 0.05;
+    co_.primitives[0].dimensions[shape_msgs::SolidPrimitive::BOX_Y] = 0.05;
+    co_.primitives[0].dimensions[shape_msgs::SolidPrimitive::BOX_Z] = 0.05;
+    co_.primitive_poses[0].position.x = -0.35;
+    co_.primitive_poses[0].position.y = -0.35;
+    co_.primitive_poses[0].position.z = 0.05;
+    pub_co_.publish(co_);
+    planning_scene_msg_.world.collision_objects.push_back(co_);
+    planning_scene_msg_.is_diff = true;
+    pub_planning_scene_diff_.publish(planning_scene_msg_);
+
+}
 
 void PickPlace::clear_obstacle()
 {
@@ -239,8 +430,8 @@ void PickPlace::clear_obstacle()
     planning_scene_msg_.is_diff = true;
     pub_planning_scene_diff_.publish(planning_scene_msg_);
     ros::WallDuration(0.1).sleep();
-    //      ROS_WARN_STREAM(__PRETTY_FUNCTION__ << ": LINE " << __LINE__ << ": remove pole ");
-    //      std::cin >> pause_;
+    ROS_WARN_STREAM(__PRETTY_FUNCTION__ << ": LINE " << __LINE__ << ": remove pole ");
+    std::cin >> pause_;
 }
 
 void PickPlace::add_obstacle()
@@ -302,8 +493,8 @@ void PickPlace::add_complex_obstacle()
     planning_scene_msg_.is_diff = true;
     pub_planning_scene_diff_.publish(planning_scene_msg_);
     ros::WallDuration(0.1).sleep();
-    //      ROS_WARN_STREAM(__PRETTY_FUNCTION__ << ": LINE " << __LINE__ << ": ADD pole ");
-    //      std::cin >> pause_;
+    ROS_WARN_STREAM(__PRETTY_FUNCTION__ << ": LINE " << __LINE__ << ": ADD pole ");
+    std::cin >> pause_;
 }
 
 void PickPlace::add_attached_obstacle()
@@ -652,7 +843,7 @@ void PickPlace::evaluate_plan(moveit::planning_interface::MoveGroup &group)
         while (result_ == false && count < 5)
         {
             count++;
-            plan_time = 20+count*10;
+            plan_time = 10+count*10;
             ROS_INFO("Setting plan time to %f sec", plan_time);
             group.setPlanningTime(plan_time);
             result_ = group.plan(my_plan);
@@ -702,11 +893,14 @@ bool PickPlace::my_pick()
     clear_workscene();
     ros::WallDuration(1.0).sleep();
     build_workscene();
+    //build_actSimScene();
     ros::WallDuration(1.0).sleep();
 
-    ROS_INFO_STREAM("Press any key to send robot to home position ...");
+    ROS_INFO_STREAM("Input any char and Enter to send robot to home position ...");
     std::cin >> pause_;
-     group_->clearPathConstraints();
+    clear_workscene();
+
+    group_->clearPathConstraints();
     group_->setNamedTarget("Home");
     evaluate_plan(*group_);
 
@@ -753,7 +947,7 @@ bool PickPlace::my_pick()
     ROS_INFO_STREAM("*************************");
     ROS_INFO_STREAM("*************************");
     ROS_INFO_STREAM("*************************");
-    ROS_INFO_STREAM("Press any key to start motion plan in joint space with obstacle ...");
+    ROS_INFO_STREAM("Input any char and Enter to start motion plan in joint space with obstacle ...");
     std::cin >> pause_;
     add_obstacle();
     group_->setJointValueTarget(pregrasp_joint_);
@@ -778,7 +972,7 @@ bool PickPlace::my_pick()
     add_target();
     ros::WallDuration(0.1).sleep();
 
-    ROS_INFO_STREAM("Press any key to move to start pose ...");
+    ROS_INFO_STREAM("Input any char and Enter to move to start pose ...");
     std::cin >> pause_;
     group_->setPoseTarget(start_pose_);
     evaluate_plan(*group_);
@@ -810,7 +1004,7 @@ bool PickPlace::my_pick()
     ROS_INFO_STREAM("*************************");
     ROS_INFO_STREAM("*************************");
     ROS_INFO_STREAM("*************************");
-    ROS_INFO_STREAM("Press any key to start motion plan in cartesian space with obstacle ...");
+    ROS_INFO_STREAM("Input any char and Enter to start motion plan in cartesian space with obstacle ...");
     std::cin >> pause_;
     clear_workscene();
     build_workscene();
@@ -831,7 +1025,7 @@ bool PickPlace::my_pick()
     group_->setPoseTarget(grasp_pose_);
     evaluate_plan(*group_);
 
-    ROS_INFO_STREAM("Press any key to grasp ...");
+    ROS_INFO_STREAM("Input any char and Enter to grasp ...");
     std::cin >> pause_;
     add_attached_obstacle();
     gripper_action(0.75*FINGER_MAX); // partially close
@@ -843,7 +1037,7 @@ bool PickPlace::my_pick()
     ROS_INFO_STREAM("Releasing gripper ...");
     gripper_action(0.0); // full open
 
-    ROS_INFO_STREAM("Press any key to start motion planning with orientation constrains ...");
+    ROS_INFO_STREAM("Input any char and Enter to start motion planning with orientation constrains ...");
     ROS_INFO_STREAM("Constraints are setup so that the robot keeps the target vertical");
     std::cin >> pause_;
     clear_workscene();
@@ -863,7 +1057,7 @@ bool PickPlace::my_pick()
     group_->setPoseTarget(grasp_pose_);
     evaluate_plan(*group_);
 
-    ROS_INFO_STREAM("Press any key to grasp ...");
+    ROS_INFO_STREAM("Input any char and Enter to grasp ...");
     std::cin >> pause_;
 
     add_attached_obstacle();
@@ -891,27 +1085,116 @@ bool PickPlace::my_pick()
 //    }
 
     clear_workscene();
-    ROS_INFO_STREAM("Press any key to quit ...");
+    ROS_INFO_STREAM("Input any char and Enter to quit ...");
     std::cin >> pause_;
     return true;
 }
 
 
-void PickPlace::getInvK(geometry_msgs::Pose &eef_pose, std::vector<double> &joint_value)
+void PickPlace::getInvK(geometry_msgs::Pose &eef_posee, std::vector<double> &joint_values)
 {
-    // TODO: transform cartesian command to joint space, and alway motion plan in joint space.
+    ROS_INFO("Inverse Kinematic test");
+    robot_state::RobotStatePtr kinematic_state(new robot_state::RobotState(robot_model_));
+    kinematic_state->setToDefaultValues();
+    const robot_state::JointModelGroup* joint_model_group = robot_model_->getJointModelGroup("arm");
+    const std::vector<std::string> &joint_names = joint_model_group->getJointModelNames();   
+    geometry_msgs::Pose target_position1=eef_posee; // Expressed in group->getPlanningFrame()
+	// target_position1.position.x =  0.5;
+	// target_position1.position.y = -0.5;
+	// target_position1.position.z =  0.5;
+    // tf::Quaternion q;
+    // q = EulerZYZ_to_Quaternion(-M_PI/4, M_PI/2, M_PI);
+    // target_position1.orientation.x = q.x();
+    // target_position1.orientation.y = q.y();
+    // target_position1.orientation.z = q.z();
+    // target_position1.orientation.w = q.w();	
+	// Compute IK
+	Eigen::Affine3d target_eig_pose1;
+    // const Eigen::Affine3d &end_effector_state = kinematic_state->getGlobalLinkTransform("j2n6s300_end_effector");
+    std::string kinova_distalLink = "j2n6s300_end_effector";
+	tf::poseMsgToEigen(target_position1, target_eig_pose1);	
+	bool found_ik = kinematic_state->setFromIK(joint_model_group, target_eig_pose1, kinova_distalLink, 10, 0.1);
+    if (found_ik)
+    {
+        kinematic_state->copyJointGroupPositions(joint_model_group, joint_values);
+        for(std::size_t i=0; i < joint_names.size(); ++i)
+        {
+            ROS_INFO("InvK Joint %s: %f", joint_names[i].c_str(), joint_values[i]);
+        }
+    }
+    else
+    {
+        ROS_INFO("Did not find IK solution");
+    }
 }
 
-
-int main(int argc, char **argv)
+void PickPlace::getForK(std::vector<double> &joint_value, geometry_msgs::Pose &m)
 {
-    ros::init(argc, argv, "pick_place_demo");
-    ros::NodeHandle node;
-    ros::AsyncSpinner spinner(1);
-    spinner.start();
-
-    kinova::PickPlace pick_place(node);
-
-    ros::spin();
-    return 0;
+    // getCurrentPose (const std::string &end_effector_link="")
+ 	// Get the pose for the end-effector end_effector_link. If end_effector_link is empty (the default value) then the end-effector reported by getEndEffectorLink() is assumed. 
+    ROS_INFO("Forward Kinematic test");
+    robot_state::RobotStatePtr kinematic_state(new robot_state::RobotState(robot_model_));
+    kinematic_state->setToDefaultValues();
+    const robot_state::JointModelGroup* joint_model_group = robot_model_->getJointModelGroup("arm");
+    const std::vector<std::string> &joint_names = joint_model_group->getJointModelNames();  
+    
+    // for(std::size_t i = 0; i < joint_names.size(); i++)
+    // {
+    //     ROS_INFO("Write Size: %dJoint i:%d %s: %f", joint_names.size(), i, joint_names[i].c_str(), joint_value[i]);
+    // }
+    // kinematic_state->setToRandomPositions(joint_model_group);
+    std::vector<double> table_joint_value(8,0.0);
+    // for(char i=0;i<joint_value.size();i++)
+    // {
+    //     kinematic_state->setJointPositions(joint_names[i+1], &joint_value[i]);
+    // }
+    for(char i=0;i<joint_value.size();i++)
+    {
+        table_joint_value[i] = joint_value[i];
+    }
+    std::cout<<"write joint array:";
+    for(int i=0;i<8;i++)
+    {
+        std::cout<<table_joint_value[i]<<" ";
+    }
+    std::cout<<std::endl;
+    //ROS_INFO_STREAM(table_joint_value);
+    //ROS_INFO("Joint i:%d %s: %f", i, joint_names[i].c_str(), joint_value[i]);
+    // std::vector<double> joint_values_(7, 0.0);
+    // 
+    //j2n6s300_joint_1 joint_values_[0] = -2.199;
+    //j2n6s300_joint_2 joint_values_[1] =  3.732;
+    //j2n6s300_joint_3 joint_values_[2] =  1.846;
+    //j2n6s300_joint_4 joint_values_[3] = -2.768;
+    //j2n6s300_joint_5 joint_values_[4] =  0.405;
+    //j2n6s300_joint_6 joint_values_[5] =  2.588;
+   
+    kinematic_state->setJointGroupPositions(joint_model_group,table_joint_value);   
+    //kinematic_state->setJointPositions(joint_names,table_joint_value);
+    // kinematic_state->setToRandomPositions(joint_model_group);
+    std::vector<double> joint_values;
+    kinematic_state->copyJointGroupPositions(joint_model_group, joint_values);
+    for(std::size_t i = 0; i < joint_names.size(); i++)
+    {
+        ROS_INFO("Read Joint i:%d %s: %f", i, joint_names[i].c_str(), joint_values[i]);
+    }  
+    const Eigen::Affine3d &end_effector_state = kinematic_state->getGlobalLinkTransform("j2n6s300_end_effector");
+    /* Print end-effector pose. Remember that this is in the model frame */
+    //ROS_INFO_STREAM("Translation: " << end_effector_state.translation());
+    //ROS_INFO_STREAM("Rotation: " << end_effector_state.rotation());   
+    tf::poseEigenToMsg(end_effector_state,m);
+    ROS_INFO_STREAM("Pose Computed:"<<m);
 }
+
+// int main(int argc, char **argv)
+// {
+//     ros::init(argc, argv, "pick_place_demo");
+//     ros::NodeHandle node;
+//     ros::AsyncSpinner spinner(1);
+//     spinner.start();
+
+//     kinova::PickPlace pick_place(node);
+
+//     ros::spin();
+//     return 0;
+// }
