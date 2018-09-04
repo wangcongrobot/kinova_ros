@@ -39,11 +39,12 @@ int main(int argc, char** argv)
   std::vector<std::string> arm_joint_names;
   //select group of joints
   moveit::planning_interface::MoveGroup group_arm("arm");
-  //choose your preferred planner
-//   group_arm.setPlannerId("SBLkConfigDefault");
+  //choose your preferred planner, the following planner works bad
+  // group_arm.setPlannerId("SBLkConfigDefault");
   group_arm.setPoseReferenceFrame("world");
   group_arm.setPoseTarget(goal_pose);
-  group_arm.setEndEffectorLink("j2n6s300_link_6");
+  // the end-effector frame is declared in moveit config, can not be changed
+  // group_arm.setEndEffectorLink("j2n6s300_link_6");
 
   ROS_INFO_STREAM("Planning to move " <<
                   group_arm.getEndEffectorLink() << " to a target pose expressed in " <<

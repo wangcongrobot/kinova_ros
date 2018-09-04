@@ -457,168 +457,168 @@ int main(int argc, char** argv)
     group_->setPoseTarget(start_pose_);
     my_plan= evaluate_plan(*group_);
     
-    // ROS_INFO("Display tracjectory!");
-    // display_trajectory.trajectory_start = my_plan.start_state_;
-    // display_trajectory.trajectory.push_back(my_plan.trajectory_);
-    // display_publisher.publish(display_trajectory);
+    ROS_INFO("Display tracjectory!");
+    display_trajectory.trajectory_start = my_plan.start_state_;
+    display_trajectory.trajectory.push_back(my_plan.trajectory_);
+    display_publisher.publish(display_trajectory);
 
-    // //ROS_INFO_STREAM(my_plan.start_state_);
-    // //ROS_INFO_STREAM(my_plan.trajectory_.joint_trajectory);
+    //ROS_INFO_STREAM(my_plan.start_state_);
+    //ROS_INFO_STREAM(my_plan.trajectory_.joint_trajectory);
     
-    // int joint_name_size, plan_point_size;
-    // joint_name_size = my_plan.trajectory_.joint_trajectory.joint_names.size();
-    // plan_point_size = my_plan.trajectory_.joint_trajectory.points.size();
-    // std::cout <<"joint_name size:"<< joint_name_size <<std::endl;
-    // std::cout <<"points  size:"<< plan_point_size <<std::endl;
-    // for(int i=0; i< joint_name_size;i++)
-    // {
-    //     ROS_INFO("joint name:%s", my_plan.trajectory_.joint_trajectory.joint_names[i].c_str());
-    // }
-    // ROS_INFO_STREAM("Last point of Plan:"<<my_plan.trajectory_.joint_trajectory.points[plan_point_size-1]);
+    int joint_name_size, plan_point_size;
+    joint_name_size = my_plan.trajectory_.joint_trajectory.joint_names.size();
+    plan_point_size = my_plan.trajectory_.joint_trajectory.points.size();
+    std::cout <<"joint_name size:"<< joint_name_size <<std::endl;
+    std::cout <<"points  size:"<< plan_point_size <<std::endl;
+    for(int i=0; i< joint_name_size;i++)
+    {
+        ROS_INFO("joint name:%s", my_plan.trajectory_.joint_trajectory.joint_names[i].c_str());
+    }
+    ROS_INFO_STREAM("Last point of Plan:"<<my_plan.trajectory_.joint_trajectory.points[plan_point_size-1]);
 
-    // for(int i=0;i<plan_point_size;i++)
-    // {    
-    //     std::vector<double> joint_value(6,0.0);
-    //     geometry_msgs::Pose pose_;
-    //     for(int j=0;j<6;j++)
-    //     {
-    //         joint_value[j]=my_plan.trajectory_.joint_trajectory.points[i].positions[j];
-    //         if(j==5)
-    //         {
-    //             pick_place.getForK(joint_value, pose_);
-    //             int point_id=0;
-    //             int line_id=1;
-    //             visualizeTrajectory.add_markerPoints(point_id, pose_);
-    //             visualizeTrajectory.add_markerLinestrip(line_id, pose_);
-    //             ROS_INFO("Planed Point:%f %f %f",pose_.position.x, pose_.position.y, pose_.position.z);
-    //         }
-    //     }
-    // }
+    for(int i=0;i<plan_point_size;i++)
+    {    
+        std::vector<double> joint_value(6,0.0);
+        geometry_msgs::Pose pose_;
+        for(int j=0;j<6;j++)
+        {
+            joint_value[j]=my_plan.trajectory_.joint_trajectory.points[i].positions[j];
+            if(j==5)
+            {
+                pick_place.getForK(joint_value, pose_);
+                int point_id=0;
+                int line_id=1;
+                visualizeTrajectory.add_markerPoints(point_id, pose_);
+                visualizeTrajectory.add_markerLinestrip(line_id, pose_);
+                ROS_INFO("Planed Point:%f %f %f",pose_.position.x, pose_.position.y, pose_.position.z);
+            }
+        }
+    }
     
-    // /* Sleep to give Rviz time to visualize the plan. */
-    // sleep(5.0);
-    // ROS_INFO("Forward Kinematic model compute test");
-    // std::vector<double> forKJointValue(6,0.0); 
-    // geometry_msgs::Pose joint_pose;
-    // forKJointValue[0]= -2.479;
-    // forKJointValue[1]=  3.738;
-    // forKJointValue[2]=  1.829;
-    // forKJointValue[3]= -0.252;
-    // forKJointValue[4]= -0.415;
-    // forKJointValue[5]=  0.440;
-    // ROS_INFO("Joint value input:");
-    // for(int i=0;i<forKJointValue.size();i++)
-    // {
-    //     std::cout<< forKJointValue[i]<<" ";
-    //     if(i == forKJointValue.size()-1)
-    //         std::cout<<std::endl;
-    // }
-    // pick_place.getForK(forKJointValue, joint_pose);
+    /* Sleep to give Rviz time to visualize the plan. */
+    sleep(5.0);
+    ROS_INFO("Forward Kinematic model compute test");
+    std::vector<double> forKJointValue(6,0.0); 
+    geometry_msgs::Pose joint_pose;
+    forKJointValue[0]= -2.479;
+    forKJointValue[1]=  3.738;
+    forKJointValue[2]=  1.829;
+    forKJointValue[3]= -0.252;
+    forKJointValue[4]= -0.415;
+    forKJointValue[5]=  0.440;
+    ROS_INFO("Joint value input:");
+    for(int i=0;i<forKJointValue.size();i++)
+    {
+        std::cout<< forKJointValue[i]<<" ";
+        if(i == forKJointValue.size()-1)
+            std::cout<<std::endl;
+    }
+    pick_place.getForK(forKJointValue, joint_pose);
     
-    // ROS_INFO("Inverse Kinematic model compute test");
-    // std::vector<double> invKJointValue;  
-    // // start_pose_.pose.position.x = 0.3;
-    // // start_pose_.pose.position.y = -0.3;
-    // // start_pose_.pose.position.z = 0.3;
-    // ROS_INFO_STREAM("Target pose:"<<start_pose_.pose);
-    // pick_place.getInvK(start_pose_.pose, invKJointValue);   
-    // ROS_INFO("Set joint of InvK Compute");
-    // group_->setJointValueTarget(invKJointValue);
-    // evaluate_plan(*group_);
-    // ros::Duration(5).sleep();    
-    // //gripper control
-    // pick_place.gripper_action(0);
-    // pick_place.gripper_action(.75*FINGER_MAX);
+    ROS_INFO("Inverse Kinematic model compute test");
+    std::vector<double> invKJointValue;  
+    // start_pose_.pose.position.x = 0.3;
+    // start_pose_.pose.position.y = -0.3;
+    // start_pose_.pose.position.z = 0.3;
+    ROS_INFO_STREAM("Target pose:"<<start_pose_.pose);
+    pick_place.getInvK(start_pose_.pose, invKJointValue);   
+    ROS_INFO("Set joint of InvK Compute");
+    group_->setJointValueTarget(invKJointValue);
+    evaluate_plan(*group_);
+    ros::Duration(5).sleep();    
+    //gripper control
+    pick_place.gripper_action(0);
+    pick_place.gripper_action(.75*FINGER_MAX);
 
-    // //Cartesian Path
-    // ROS_INFO("Cartesian Path TEST");
-    // geometry_msgs::Pose start_pose2 = start_pose_.pose;
-    // std::vector<geometry_msgs::Pose> waypoints;
-    // waypoints.push_back(start_pose2);
+    //Cartesian Path
+    ROS_INFO("Cartesian Path TEST");
+    geometry_msgs::Pose start_pose2 = start_pose_.pose;
+    std::vector<geometry_msgs::Pose> waypoints;
+    waypoints.push_back(start_pose2);
 
-    // geometry_msgs::Pose target_pose3 = start_pose2;
+    geometry_msgs::Pose target_pose3 = start_pose2;
 
-    // target_pose3.position.z += 0.2;
-    // waypoints.push_back(target_pose3);  // up
+    target_pose3.position.z += 0.2;
+    waypoints.push_back(target_pose3);  // up
 
-    // target_pose3.position.x -= 0.3;
-    // waypoints.push_back(target_pose3);  // left
+    target_pose3.position.x -= 0.3;
+    waypoints.push_back(target_pose3);  // left
 
-    // target_pose3.position.z -= 0.2;
-    // waypoints.push_back(target_pose3);  // down and right
+    target_pose3.position.z -= 0.2;
+    waypoints.push_back(target_pose3);  // down and right
 
-    // group_->setMaxVelocityScalingFactor(0.2);
-    // moveit_msgs::RobotTrajectory trajectory;
-    // const double jump_threshold = 0.0;
-    // const double eef_step = 0.01;
-    // double fraction = group_->computeCartesianPath(waypoints, eef_step, jump_threshold, trajectory);
-    // ROS_INFO_NAMED("tutorial", "Visualizing plan (Cartesian path) (%.2f%% acheived)", fraction * 100.0);
+    group_->setMaxVelocityScalingFactor(0.2);
+    moveit_msgs::RobotTrajectory trajectory;
+    const double jump_threshold = 0.0;
+    const double eef_step = 0.01;
+    double fraction = group_->computeCartesianPath(waypoints, eef_step, jump_threshold, trajectory);
+    ROS_INFO_NAMED("tutorial", "Visualizing plan (Cartesian path) (%.2f%% acheived)", fraction * 100.0);
 
-    // joint_name_size = trajectory.joint_trajectory.joint_names.size();
-    // plan_point_size = trajectory.joint_trajectory.points.size();
-    // std::cout <<"joint_name size:"<< joint_name_size <<std::endl;
-    // std::cout <<"points  size:"<< plan_point_size <<std::endl;
-    // for(int i=0; i< joint_name_size;i++)
-    // {
-    //     ROS_INFO("joint name:%s", trajectory.joint_trajectory.joint_names[i].c_str());
-    // }
-    // ROS_INFO_STREAM("Last point of Plan:"<<trajectory.joint_trajectory.points[plan_point_size-1]);
+    joint_name_size = trajectory.joint_trajectory.joint_names.size();
+    plan_point_size = trajectory.joint_trajectory.points.size();
+    std::cout <<"joint_name size:"<< joint_name_size <<std::endl;
+    std::cout <<"points  size:"<< plan_point_size <<std::endl;
+    for(int i=0; i< joint_name_size;i++)
+    {
+        ROS_INFO("joint name:%s", trajectory.joint_trajectory.joint_names[i].c_str());
+    }
+    ROS_INFO_STREAM("Last point of Plan:"<<trajectory.joint_trajectory.points[plan_point_size-1]);
 
-    // my_plan.trajectory_=trajectory;
-    // group_->execute(my_plan);
-    // ros::Duration(5).sleep();
+    my_plan.trajectory_=trajectory;
+    group_->execute(my_plan);
+    ros::Duration(5).sleep();
 
-    // for(int i=0;i<plan_point_size;i++)
-    // {    
-    //     std::vector<double> joint_value(6,0.0);
-    //     geometry_msgs::Pose pose_;
-    //     for(int j=0;j<6;j++)
-    //     {
-    //         joint_value[j]=trajectory.joint_trajectory.points[i].positions[j];
-    //         if(j==5)
-    //         {
-    //             pick_place.getForK(joint_value, pose_);
-    //             int point_id=0;
-    //             int line_id=1;
-    //             visualizeTrajectory.add_markerPoints(point_id, pose_);
-    //             visualizeTrajectory.add_markerLinestrip(line_id, pose_);
-    //             ROS_INFO("Planed Point:%f %f %f",pose_.position.x, pose_.position.y, pose_.position.z);
-    //         }
-    //     }
-    // }
+    for(int i=0;i<plan_point_size;i++)
+    {    
+        std::vector<double> joint_value(6,0.0);
+        geometry_msgs::Pose pose_;
+        for(int j=0;j<6;j++)
+        {
+            joint_value[j]=trajectory.joint_trajectory.points[i].positions[j];
+            if(j==5)
+            {
+                pick_place.getForK(joint_value, pose_);
+                int point_id=0;
+                int line_id=1;
+                visualizeTrajectory.add_markerPoints(point_id, pose_);
+                visualizeTrajectory.add_markerLinestrip(line_id, pose_);
+                ROS_INFO("Planed Point:%f %f %f",pose_.position.x, pose_.position.y, pose_.position.z);
+            }
+        }
+    }
 
-    //grasp test
+    grasp test
 
    
-    // ROS_INFO_STREAM("Input any char and Enter to move to grasp Start pose ...");
-    // std::cin >> pause_;
-    // start_pose_.pose.position.x = 0.1;
-    // start_pose_.pose.position.y = -0.62;
-    // start_pose_.pose.position.z = 0.1;
-    // group_->setPoseTarget(start_pose_);
-    // my_plan= evaluate_plan(*group_);
-    // pick_place.gripper_action(.5*FINGER_MAX);
-    // ros::Duration(2).sleep();
-    // group_->attachObject("prism");
+    ROS_INFO_STREAM("Input any char and Enter to move to grasp Start pose ...");
+    std::cin >> pause_;
+    start_pose_.pose.position.x = 0.1;
+    start_pose_.pose.position.y = -0.62;
+    start_pose_.pose.position.z = 0.1;
+    group_->setPoseTarget(start_pose_);
+    my_plan= evaluate_plan(*group_);
+    pick_place.gripper_action(.5*FINGER_MAX);
+    ros::Duration(2).sleep();
+    group_->attachObject("prism");
 
 
-    // start_pose_.pose.position.x = 0.5;
-    // start_pose_.pose.position.y = -0.5;
-    // start_pose_.pose.position.z = 0.1;
-    // ROS_INFO_STREAM("Input any char and Enter to move to grasp End pose ...");
-    // std::cin >> pause_;
-    // group_->setPoseTarget(start_pose_);
-    // my_plan= evaluate_plan(*group_);
-    // ros::Duration(5).sleep();
-    // group_->detachObject("prism");
+    start_pose_.pose.position.x = 0.5;
+    start_pose_.pose.position.y = -0.5;
+    start_pose_.pose.position.z = 0.1;
+    ROS_INFO_STREAM("Input any char and Enter to move to grasp End pose ...");
+    std::cin >> pause_;
+    group_->setPoseTarget(start_pose_);
+    my_plan= evaluate_plan(*group_);
+    ros::Duration(5).sleep();
+    group_->detachObject("prism");
 
-    // moveit::planning_interface::PlanningSceneInterface planning_scene_interface;
-    // ROS_INFO_NAMED("tutorial", "Remove the object from the world");
-    // std::vector<std::string> object_ids;
-    // object_ids.push_back("prism");
-    // planning_scene_interface.removeCollisionObjects(object_ids);
-    // buildWorkScene.clear_WorkScene("prism");
-    // ros::Duration(0.1).sleep();
+    moveit::planning_interface::PlanningSceneInterface planning_scene_interface;
+    ROS_INFO_NAMED("tutorial", "Remove the object from the world");
+    std::vector<std::string> object_ids;
+    object_ids.push_back("prism");
+    planning_scene_interface.removeCollisionObjects(object_ids);
+    buildWorkScene.clear_WorkScene("prism");
+    ros::Duration(0.1).sleep();
 
     ros::shutdown();
     return 0;
