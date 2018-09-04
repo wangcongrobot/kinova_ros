@@ -29,7 +29,7 @@ int main(int argc, char **argv) {
   // just the origon of the frame
   ee_point.point.x = 0.0;
   ee_point.point.y = 0.0;
-  ee_point.point.z = 0.125; // translate form arm_6_link to gripper frame
+  ee_point.point.z = -0.125; // translate form arm_6_link to gripper frame
 
   ros::Rate rate(50);
 
@@ -38,7 +38,7 @@ int main(int argc, char **argv) {
     try {
       listener.transformPoint(robot_name + "_link_base", ee_point, base_point);
 
-      ROS_INFO("ee_origon: (%.2f, %.2f. %.2f) -----> base_link: (%.3f, %.3f, "
+      ROS_INFO("ee_origin: (%.2f, %.2f. %.2f) -----> base_link: (%.3f, %.3f, "
                "%.3f) at time %.2f",
                ee_point.point.x, ee_point.point.y, ee_point.point.z,
                base_point.point.x, base_point.point.y, base_point.point.z,
