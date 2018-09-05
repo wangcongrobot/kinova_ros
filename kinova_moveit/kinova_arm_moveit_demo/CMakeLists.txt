@@ -29,6 +29,8 @@ find_package(Eigen REQUIRED)
 
 find_package(kinova_driver REQUIRED)
 
+
+catkin_python_setup()
 ###########
 ## Build ##
 ###########
@@ -74,3 +76,10 @@ install(TARGETS cartesianPlan DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 add_executable(planWithObstacle src/planWithObstacle.cpp src/add_scene_objects.cpp )
 target_link_libraries(planWithObstacle ${catkin_LIBRARIES} ${Boost_LIBRARIES} ${kinova_driver_LIBRARIES})
 install(TARGETS planWithObstacle DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
+
+
+# python executable scripts
+install(PROGRAMS
+  scripts/joint_control.py
+  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+)
