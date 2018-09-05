@@ -61,6 +61,7 @@ int main(int argc, char **argv) {
 
   // select group of joints
   moveit::planning_interface::MoveGroup group_arm("arm");
+  moveit::planning_interface::PlanningSceneInterface planning_scene_interface;
   // choose your preferred planner, the following planner works bad
   // group_arm.setPlannerId("SBLkConfigDefault");
   group_arm.setPoseReferenceFrame("world");
@@ -84,7 +85,7 @@ int main(int argc, char **argv) {
   kinectBasePose.position.y = 0;
   kinectBasePose.position.z = 0.3;
   tf::Quaternion qkinect = tf::createQuaternionFromRPY(0, 1.57, 1.57);
-  //   ROS_INFO_STREAM("Kinect obs pose: " << qkinect);
+  // ROS_INFO_STREAM("Kinect obs pose: " << qkinect);
   kinectBasePose.orientation.x = qkinect[0];
   kinectBasePose.orientation.y = qkinect[1];
   kinectBasePose.orientation.z = qkinect[2];
@@ -96,12 +97,15 @@ int main(int argc, char **argv) {
   kinectBodyPose.position.y = -0.05;
   kinectBodyPose.position.z = 0.65;
   tf::Quaternion qbody = tf::createQuaternionFromRPY(0, 0, -1.57);
-  //   ROS_INFO_STREAM("Kinect obs pose: " << qbody);
+  // ROS_INFO_STREAM("Kinect obs pose: " << qbody);
   kinectBodyPose.orientation.x = qbody[0];
   kinectBodyPose.orientation.y = qbody[1];
   kinectBodyPose.orientation.z = qbody[2];
   kinectBodyPose.orientation.w = qbody[3];
   buildWorkScene.add_boxModel("kinectBody", 0.1, 0.3, 0.1, kinectBodyPose);
+
+  // add collision objects to world
+  planning_scene_interface.addCollisionObjects(buildWorkScene.collision_objects);
 
   ROS_INFO("Collision setup finished");
 
@@ -122,6 +126,17 @@ int main(int argc, char **argv) {
     throw std::runtime_error("No plan found");
 
   ROS_INFO_STREAM("Plan found in " << my_plan.planning_time_ << " seconds");
+
+  // Display plan trajectory
+  ROS_INFO("Display tracjectory!");  
+  ros::Publisher display_publisher =
+      node_handle.advertise<moveit_msgs::DisplayTrajectory>(
+          "/move_group/display_planned_path", 1, true);
+  moveit_msgs::DisplayTrajectory display_trajectory;
+  display_trajectory.trajectory_start = my_plan.start_state_;
+  display_trajectory.trajectory.push_back(my_plan.trajectory_);
+  display_publisher.publish(display_trajectory);
+  sleep(3.0);
 
   // Execute the plan
   ros::Time start = ros::Time::now();

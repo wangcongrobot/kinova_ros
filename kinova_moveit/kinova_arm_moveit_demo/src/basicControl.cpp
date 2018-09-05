@@ -72,7 +72,6 @@ tf::Quaternion EulerZYZ2Quaternion(double tz1, double ty, double tz2) {
   return q;
 }
 
-
 moveit::planning_interface::MoveGroup::Plan
 evaluate_plan(moveit::planning_interface::MoveGroup &group) {
   bool replan = true;
@@ -257,13 +256,14 @@ int main(int argc, char **argv) {
 
   // build work scene
   // --------------------------------start--------------------------------------------------------->
-  // primitive sphere
+  // primitive objects
   ros::NodeHandle n;
-  ROS_INFO("Insert scene objects in workspace");
+  ROS_INFO("Add collision objects in workspace");
   build_workScene buildWorkScene(n);
   geometry_msgs::Pose tablePose, prismPose, hollowPrismPose, kinectObsPose,
       kinectBodyPose;
 
+  // add plane obstacle under the arm
   tablePose.position.x = 0;
   tablePose.position.y = 0;
   tablePose.position.z = -0.03 / 2.0;
@@ -274,7 +274,7 @@ int main(int argc, char **argv) {
   kinectObsPose.position.y = 0;
   kinectObsPose.position.z = 0.3;
   tf::Quaternion qkinect = tf::createQuaternionFromRPY(0, 1.57, 0);
-  //   ROS_INFO_STREAM("Kinect obs pose: " << qkinect);
+  // ROS_INFO_STREAM("Kinect obs pose: " << qkinect);
   kinectObsPose.orientation.x = qkinect[0];
   kinectObsPose.orientation.y = qkinect[1];
   kinectObsPose.orientation.z = qkinect[2];
@@ -286,7 +286,7 @@ int main(int argc, char **argv) {
   kinectBodyPose.position.y = 0;
   kinectBodyPose.position.z = 0.65;
   tf::Quaternion qbody = tf::createQuaternionFromRPY(0, 1.57, 0);
-  //   ROS_INFO_STREAM("Kinect obs pose: " << qbody);
+  // ROS_INFO_STREAM("Kinect obs pose: " << qbody);
   kinectBodyPose.orientation.x = qbody[0];
   kinectBodyPose.orientation.y = qbody[1];
   kinectBodyPose.orientation.z = qbody[2];
@@ -303,7 +303,8 @@ int main(int argc, char **argv) {
   //   hollowPrismPose.position.z = 0.0;
   //   hollowPrismPose.orientation.w = 1.0;
   // buildWorkScene.add_meshModel("hollowPrism", hollowPrism, hollowPrismPose);
-  ROS_INFO_STREAM("Input re to remove all object or n to next:");
+  ROS_INFO_STREAM("Scene initialization finished \n"
+                  << "Input re to remove all object or n to next:");
 
   std::cin >> pause_;
 
@@ -311,8 +312,8 @@ int main(int argc, char **argv) {
   marker_visualize visualizeTrajectory(node_handle_marker);
   if (pause_ == "re" || pause_ == "RE") {
     buildWorkScene.clear_WorkScene("table");
-    // buildWorkScene.clear_WorkScene("prism");
-    // buildWorkScene.clear_WorkScene("hollowPrism");
+    buildWorkScene.clear_WorkScene("kinectBody");
+    buildWorkScene.clear_WorkScene("kinectObs");
     ROS_INFO("Objects have been removed!");
   }
 
@@ -370,6 +371,7 @@ int main(int argc, char **argv) {
   display_trajectory.trajectory_start = my_plan.start_state_;
   display_trajectory.trajectory.push_back(my_plan.trajectory_);
   display_publisher.publish(display_trajectory);
+  sleep(3.0);
 
   // ROS_INFO_STREAM(my_plan.start_state_);
   // ROS_INFO_STREAM(my_plan.trajectory_.joint_trajectory);
