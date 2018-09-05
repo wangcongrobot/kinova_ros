@@ -17,6 +17,16 @@ find_package(catkin REQUIRED
 )
 
 find_package(Boost REQUIRED system filesystem date_time thread)
+find_package(Eigen REQUIRED)
+find_package(kinova_driver REQUIRED)
+
+# Add .msg, .srv, .action files if necessary
+# add_message_files(...)
+# add_service_files(...)
+# add_action_files(...)
+# generate_messages(...)
+
+
 
 catkin_package(
   INCLUDE_DIRS include
@@ -25,9 +35,7 @@ catkin_package(
     moveit_ros_planning_interface
     interactive_markers
 )
-find_package(Eigen REQUIRED)
 
-find_package(kinova_driver REQUIRED)
 
 
 catkin_python_setup()
@@ -39,11 +47,13 @@ include_directories(
   ${catkin_INCLUDE_DIRS}
 )
 
+# Header files direcotory
 include_directories(SYSTEM ${Boost_INCLUDE_DIR} ${EIGEN_INCLUDE_DIRS})
-include_directories(${catkin_INCLUDE_DIRS})
-link_directories(${catkin_LIBRARY_DIRS})
-
+# include_directories(${catkin_INCLUDE_DIRS})
 include_directories(${kinova_driver_INCLUDE_DIRS})
+
+# Library files directory
+link_directories(${catkin_LIBRARY_DIRS})
 
 add_executable(motion_plan src/motion_plan.cpp)
 target_link_libraries(motion_plan ${catkin_LIBRARIES} ${Boost_LIBRARIES} ${kinova_driver_LIBRARIES})
