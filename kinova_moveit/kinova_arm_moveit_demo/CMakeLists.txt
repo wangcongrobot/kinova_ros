@@ -60,13 +60,17 @@ target_link_libraries(test_accuracy ${catkin_LIBRARIES} ${Boost_LIBRARIES} ${kin
 install(TARGETS test_accuracy DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 
 #test example added by hekai
-add_executable(basicControl src/basicControl.cpp src/pick_place.cpp include/pick_place.h )
+add_executable(basicControl src/basicControl.cpp src/pick_place.cpp src/add_scene_objects.cpp )
 target_link_libraries(basicControl ${catkin_LIBRARIES} ${Boost_LIBRARIES} ${kinova_driver_LIBRARIES})
 install(TARGETS basicControl DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 #get_cmake_property(_variableNames VARIABLES)
 #foreach (_variableName ${_variableNames})
 #    message(STATUS "${_variableName}=${${_variableName}}")
 #endforeach()
-add_executable(cartesianPlan src/cartesianPlan.cpp)
+add_executable(cartesianPlan src/cartesianPlan.cpp )
 target_link_libraries(cartesianPlan ${catkin_LIBRARIES} ${Boost_LIBRARIES} ${kinova_driver_LIBRARIES})
 install(TARGETS cartesianPlan DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
+
+add_executable(planWithObstacle src/planWithObstacle.cpp src/add_scene_objects.cpp )
+target_link_libraries(planWithObstacle ${catkin_LIBRARIES} ${Boost_LIBRARIES} ${kinova_driver_LIBRARIES})
+install(TARGETS planWithObstacle DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
