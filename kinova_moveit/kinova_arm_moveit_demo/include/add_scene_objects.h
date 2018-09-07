@@ -34,7 +34,7 @@ public:
                      geometry_msgs::Pose prePose);
   void clear_WorkScene(const char *objName);
 
-  std::vector<moveit_msgs::CollisionObject> collision_objects;
+  std::vector<moveit_msgs::CollisionObject>  collision_objects ;
 
 private:
   /* data */

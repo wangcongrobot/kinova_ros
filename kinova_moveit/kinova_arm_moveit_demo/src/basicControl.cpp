@@ -371,7 +371,6 @@ int main(int argc, char **argv) {
   display_trajectory.trajectory_start = my_plan.start_state_;
   display_trajectory.trajectory.push_back(my_plan.trajectory_);
   display_publisher.publish(display_trajectory);
-  sleep(3.0);
 
   // ROS_INFO_STREAM(my_plan.start_state_);
   // ROS_INFO_STREAM(my_plan.trajectory_.joint_trajectory);

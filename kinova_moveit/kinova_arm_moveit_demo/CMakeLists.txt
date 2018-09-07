@@ -67,29 +67,33 @@ install(TARGETS work_scene DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 #target_link_libraries(pick_place ${catkin_LIBRARIES} ${Boost_LIBRARIES} ${kinova_driver_LIBRARIES})
 #install(TARGETS pick_place DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 
-add_executable(test_accuracy src/test_accuracy.cpp include/test_accuracy.h)
+add_executable(test_accuracy src/test_accuracy.cpp )
 target_link_libraries(test_accuracy ${catkin_LIBRARIES} ${Boost_LIBRARIES} ${kinova_driver_LIBRARIES})
 install(TARGETS test_accuracy DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 
+add_executable(cartesianPlan src/cartesianPlan.cpp )
+target_link_libraries(cartesianPlan ${catkin_LIBRARIES} ${Boost_LIBRARIES} ${kinova_driver_LIBRARIES})
+install(TARGETS cartesianPlan DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
+
+add_library(add_scene_objects src/add_scene_objects.cpp)
+target_link_libraries(add_scene_objects ${catkin_LIBRARIES} ${Boost_LIBRARIES} ${kinova_driver_LIBRARIES})
+
 #test example added by hekai
-add_executable(basicControl src/basicControl.cpp src/pick_place.cpp src/add_scene_objects.cpp )
-target_link_libraries(basicControl ${catkin_LIBRARIES} ${Boost_LIBRARIES} ${kinova_driver_LIBRARIES})
+add_executable(basicControl src/basicControl.cpp src/pick_place.cpp )
+target_link_libraries(basicControl add_scene_objects ${catkin_LIBRARIES} ${Boost_LIBRARIES} ${kinova_driver_LIBRARIES})
 install(TARGETS basicControl DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 #get_cmake_property(_variableNames VARIABLES)
 #foreach (_variableName ${_variableNames})
 #    message(STATUS "${_variableName}=${${_variableName}}")
 #endforeach()
-add_executable(cartesianPlan src/cartesianPlan.cpp )
-target_link_libraries(cartesianPlan ${catkin_LIBRARIES} ${Boost_LIBRARIES} ${kinova_driver_LIBRARIES})
-install(TARGETS cartesianPlan DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 
-add_executable(planWithObstacle src/planWithObstacle.cpp src/add_scene_objects.cpp )
-target_link_libraries(planWithObstacle ${catkin_LIBRARIES} ${Boost_LIBRARIES} ${kinova_driver_LIBRARIES})
+add_executable(planWithObstacle src/planWithObstacle.cpp)
+target_link_libraries(planWithObstacle add_scene_objects ${catkin_LIBRARIES} ${Boost_LIBRARIES} ${kinova_driver_LIBRARIES})
 install(TARGETS planWithObstacle DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 
 
 # python executable scripts
-install(PROGRAMS
-  scripts/joint_control.py
-  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
-)
+# install(PROGRAMS
+#   scripts/joint_control.py
+#   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+# )
