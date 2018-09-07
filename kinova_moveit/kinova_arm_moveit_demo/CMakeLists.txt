@@ -37,8 +37,6 @@ catkin_package(
 )
 
 
-
-catkin_python_setup()
 ###########
 ## Build ##
 ###########
@@ -91,6 +89,9 @@ add_executable(planWithObstacle src/planWithObstacle.cpp)
 target_link_libraries(planWithObstacle add_scene_objects ${catkin_LIBRARIES} ${Boost_LIBRARIES} ${kinova_driver_LIBRARIES})
 install(TARGETS planWithObstacle DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 
+add_executable(visualControl src/visualControl.cpp)
+target_link_libraries(visualControl add_scene_objects ${catkin_LIBRARIES} ${Boost_LIBRARIES} ${kinova_driver_LIBRARIES})
+install(TARGETS planWithObstacle DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 
 # python executable scripts
 # install(PROGRAMS

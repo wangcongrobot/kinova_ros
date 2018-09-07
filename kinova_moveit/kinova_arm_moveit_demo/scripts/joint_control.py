@@ -149,8 +149,9 @@ def verboseParser(verbose, joint_degree):
 
 
 if __name__ == '__main__':
-
+    print("Use this script with command line example: rosrun kinova_arm_moveit_demo joint_control.py -v -r j2n6s300 degree -- 10 10 10 10 10 10")
     args = argumentParser(None)
+    print(args)
 
     # parse robot names
     kinova_robotTypeParser(args.kinova_robotType)
