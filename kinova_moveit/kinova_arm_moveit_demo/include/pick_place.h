@@ -100,6 +100,8 @@ namespace kinova
         geometry_msgs::PoseStamped postgrasp_pose_;
 
     public:
+        geometry_msgs::PoseStamped current_pose; 
+        geometry_msgs::Pose get_ee_pose();   
         void build_workscene();
         void build_actSimScene();
 

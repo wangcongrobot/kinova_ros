@@ -1198,3 +1198,7 @@ void PickPlace::getForK(std::vector<double> &joint_value, geometry_msgs::Pose &m
 //     ros::spin();
 //     return 0;
 // }
+geometry_msgs::Pose PickPlace::get_ee_pose()
+{
+    return current_pose_.pose;
+}

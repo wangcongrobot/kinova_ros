@@ -3,9 +3,19 @@ project(kinova_arm_moveit_demo)
 
 add_compile_options(-std=c++11)
 
+
+
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
+find_package(catkin REQUIRED COMPONENTS
+  id_data_msgs
+  roscpp
+  rospy
+	message_generation
+  std_msgs
+)
+
 find_package(catkin REQUIRED
              COMPONENTS
              moveit_core
@@ -14,7 +24,14 @@ find_package(catkin REQUIRED
              pluginlib
              cmake_modules
              geometric_shapes
+             id_data_msgs
 )
+
+
+generate_messages(
+   DEPENDENCIES
+   std_msgs
+ )
 
 find_package(Boost REQUIRED system filesystem date_time thread)
 find_package(Eigen REQUIRED)
@@ -34,6 +51,7 @@ catkin_package(
     moveit_core
     moveit_ros_planning_interface
     interactive_markers
+    message_runtime
 )
 
 
@@ -89,7 +107,7 @@ add_executable(planWithObstacle src/planWithObstacle.cpp)
 target_link_libraries(planWithObstacle add_scene_objects ${catkin_LIBRARIES} ${Boost_LIBRARIES} ${kinova_driver_LIBRARIES})
 install(TARGETS planWithObstacle DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 
-add_executable(visualControl src/visualControl.cpp)
+add_executable(visualControl src/visualControl.cpp src/pick_place.cpp)
 target_link_libraries(visualControl add_scene_objects ${catkin_LIBRARIES} ${Boost_LIBRARIES} ${kinova_driver_LIBRARIES})
 install(TARGETS planWithObstacle DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 
