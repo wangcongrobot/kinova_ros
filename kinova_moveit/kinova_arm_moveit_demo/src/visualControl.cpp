@@ -2,6 +2,7 @@
  * Receive target point from kinect and move arm to the target
  * and grasp
 */
+
 #include "darknet_ros_msgs/TargetPoint.h"
 #include "darknet_ros_msgs/TargetPoints.h"
 #include "id_data_msgs/ID_Data.h"
@@ -45,6 +46,8 @@ bool receive_msg_flag = false;
 
 void kinectCallback(const darknet_ros_msgs::TargetPoints::ConstPtr &msg) {
   //  TODO
+  // if (msg->target_points == NONE)
+  //   return;
   if (receive_msg_flag == false) {
     for (int i = 0; msg->target_points.size(); i++) {
       if (msg->target_points[i].Class == "can") {
@@ -60,9 +63,7 @@ void kinectCallback(const darknet_ros_msgs::TargetPoints::ConstPtr &msg) {
         tf::createQuaternionMsgFromRollPitchYaw(1.57, -1.0, 0.0);
     receive_msg_flag = true;
 
-    ROS_INFO_STREAM("Object postion: " << canPoint.camera_x << ", "
-                                       << canPoint.camera_y << ", "
-                                       << canPoint.camera_z);
+    ROS_INFO_STREAM("Get object pose from kinect");
   } else
     return;
 }
@@ -203,10 +204,10 @@ void notice_pub_sub::notice_sub_spinner(char set) {
     notice_spinner->stop();
 }
 
-void notice_pub_sub::notice_data_clear(id_data_msgs::ID_Data *test)
-{
-    test->id=0;
-    for(int i=0;i<8;i++) test->data[i]=0;
+void notice_pub_sub::notice_data_clear(id_data_msgs::ID_Data *test) {
+  test->id = 0;
+  for (int i = 0; i < 8; i++)
+    test->data[i] = 0;
 }
 
 // get end effector state
@@ -255,6 +256,10 @@ int main(int argc, char **argv) {
   ros::Subscriber subKinect =
       nh.subscribe("/darknet_ros/target_points", 100, kinectCallback);
   ros::spinOnce();
+
+  ROS_INFO_STREAM("Target object position:" << goal_pose.pose.position.x << ","
+                                            << goal_pose.pose.position.y << ","
+                                            << goal_pose.pose.position.z);
 
   // if (atof(argv[2]) > -0.15) {
   //   ROS_INFO("Wrong posiiton, y value should be less then -0.15");
@@ -413,10 +418,9 @@ int main(int argc, char **argv) {
            pregrasp_pose.pose.position.y, pregrasp_pose.pose.position.z,
            pregrasp_pose.header.stamp.toSec());
 
-  string pause;
   ROS_INFO_STREAM("Print n to excute the straight line plan");
-  cin >> pause;
-  if ("n" == pause) {
+  cin >> pause_;
+  if ("n" == pause_) {
     ROS_INFO("Begin cartesian line plan");
   } else {
     return EXIT_FAILURE;
@@ -471,15 +475,14 @@ int main(int argc, char **argv) {
 
   // GRASP TEST HK
   ROS_INFO("Begin grasp demo, press n to next:");
-  cin >> pause;
+  cin >> pause_;
 
-  if ("n" == pause) {
+  if ("n" == pause_) {
     ROS_INFO("Begin grasp demo");
-    
+
   } else {
     return EXIT_FAILURE;
   }
-
 
   notice_test.notice_data_clear(&notice_data_pub);
   notice_data_pub.id = 1;
