@@ -3,13 +3,8 @@
  * and grasp
 */
 
-#include "darknet_ros_msgs/TargetPoint.h"
-#include "darknet_ros_msgs/TargetPoints.h"
-#include "id_data_msgs/ID_Data.h"
-#include "id_data_msgs/ID_Data.h"
 #include "ros/callback_queue.h"
 #include "ros/ros.h"
-#include <add_scene_objects.h> // handle scene obstacles
 #include <geometric_shapes/shape_operations.h>
 #include <geometric_shapes/solid_primitive_dims.h>
 #include <geometry_msgs/PointStamped.h>
@@ -30,11 +25,13 @@
 #include <map>
 #include <string>
 #include <vector>
-// test hk
-#include <pick_place.h>
 
+// custom headers
+#include "darknet_ros_msgs/TargetPoint.h" // kinect info
+#include "darknet_ros_msgs/TargetPoints.h"
 #include "id_data_msgs/ID_Data.h" //using for notie event
-#include "ros/callback_queue.h"
+#include <add_scene_objects.h>    // handle scene obstacles
+#include <pick_place.h>
 
 using namespace std;
 #define PREGRASP_OFFSET 0.20;
@@ -418,10 +415,11 @@ int main(int argc, char **argv) {
            pregrasp_pose.pose.position.y, pregrasp_pose.pose.position.z,
            pregrasp_pose.header.stamp.toSec());
 
+  ROS_INFO("Begin cartesian line plan");
   ROS_INFO_STREAM("Print n to excute the straight line plan");
   cin >> pause_;
   if ("n" == pause_) {
-    ROS_INFO("Begin cartesian line plan");
+    ROS_INFO("READY..............");
   } else {
     return EXIT_FAILURE;
   }
