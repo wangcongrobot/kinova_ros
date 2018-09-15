@@ -35,6 +35,7 @@ challenge.
 #include <control_msgs/JointTolerance.h>
 
 // Std C++ headers
+#include <iostream>
 #include <map>
 #include <string>
 #include <vector>
@@ -139,7 +140,7 @@ private:
   ros::AsyncSpinner *notice_spinner;
   ros::CallbackQueue notice_callbackqueue;
   void notice_msgCallback(const id_data_msgs::ID_Data::ConstPtr &notice_msg);
-  ros::ServiceClient jaco_estop_client;
+  // ros::ServiceClient jaco_estop_client;
 };
 
 notice_pub_sub::notice_pub_sub() {
@@ -153,8 +154,8 @@ notice_pub_sub::notice_pub_sub() {
 
   notice_publisher =
       notice_handle.advertise<id_data_msgs::ID_Data>("/notice", 10);
-  jaco_estop_client = notice_handle.serviceClient<wpi_jaco_msgs::EStop>(
-      "/jaco_arm/software_estop");
+  // jaco_estop_client = notice_handle.serviceClient<wpi_jaco_msgs::EStop>(
+  //     "/jaco_arm/software_estop");
 }
 
 void notice_pub_sub::notice_pub_sub_pulisher(id_data_msgs::ID_Data id_data) {
@@ -273,12 +274,12 @@ void notice_pub_sub::notice_msgCallback(
 
   /***** communication with main loop *****/
 
-  if (notice_message->id == 4 && notice_message->data[0] == 1 &&
-      notice_message->data[1] == 2) {
+  if (notice_message.id == 4 && notice_message.data[0] == 1 &&
+      notice_message.data[1] == 2) {
     ROS_INFO("Receive command: grasp object");
-    float x = notice_message->data[2]; // object pose, coordinate x
-    float y = notice_message->data[3]; // object pose, coordinate y
-    float z = notice_message->data[4]; // object pose, coordinate z
+    float x = notice_message.data[2]; // object pose, coordinate x
+    float y = notice_message.data[3]; // object pose, coordinate y
+    float z = notice_message.data[4]; // object pose, coordinate z
     if (abs(x) < 0.5 && y < -0.3) {
       ROS_INFO("Receive valid object position form kinect");
       grasp_pose.position.x = x;
@@ -288,12 +289,12 @@ void notice_pub_sub::notice_msgCallback(
       arm_start_fetch_flag = true;
       grasp_flag = true; // hard obj
     }
-  } else if (notice_message->id == 4 && notice_message->data[0] == 1 &&
-             notice_message->data[1] == 10) {
+  } else if (notice_message.id == 4 && notice_message.data[0] == 1 &&
+             notice_message.data[1] == 10) {
     ROS_INFO("Receive command: suck object");
-    float x = notice_message->data[2]; // object pose, coordinate x
-    float y = notice_message->data[3]; // object pose, coordinate y
-    float z = notice_message->data[4]; // object pose, coordinate z
+    float x = notice_message.data[2]; // object pose, coordinate x
+    float y = notice_message.data[3]; // object pose, coordinate y
+    float z = notice_message.data[4]; // object pose, coordinate z
     if (abs(x) < 0.5 && y < -0.3) {
       ROS_INFO("Receive valid object position form kinect");
       suck_pose.position.x = x;
@@ -334,7 +335,10 @@ void poseInit() {
   grasp_pose.orientation = tf::createQuaternionMsgFromRollPitchYaw(
       1.57, -1.0, 0.0);         // grasp orientation
   tf::Quaternion q(0, 0, 0, 1); // suck orientation
-  suck_pose.orientation = q;
+  suck_pose.orientation.x = q.x();
+  suck_pose.orientation.y = q.y();
+  suck_pose.orientation.z = q.z();
+  suck_pose.orientation.w = q.w();
 
   // TODO  place pose
 
@@ -351,7 +355,7 @@ void notice_data_clear(id_data_msgs::ID_Data *test);
 void moveToTarget(const geometry_msgs::Pose &target);
 void moveToTarget(const std::string &target_name);
 void moveToTarget(const geometry_msgs::PoseStamped &target);
-void moveLineTarget(const geometry_msgs::Pose &start,
+int moveLineTarget(const geometry_msgs::Pose &start,
                     const geometry_msgs::Pose &goal);
 
 // fill trajectory msg
@@ -401,7 +405,7 @@ void handleCollisionObj(build_workScene &buildWorkScene) {
 int main(int argc, char **argv) {
   ros::init(argc, argv, "jaco_moveit_control_main");
   ros::NodeHandle nh;
-
+  kinova::PickPlace pick_place(nh);
   //   ros::Subscriber subFromkinect =
   //       nh.subscribe("/notice/targetPoint", 1, kinectCallback);
 
@@ -422,7 +426,7 @@ int main(int argc, char **argv) {
   ROS_INFO("Add collision objects  into the world (kinect and mobile base)");
   moveit::planning_interface::PlanningSceneInterface planning_scene_interface;
   build_workScene buildWorkScene(nh);
-  handleCollisionObj(build_workScene); // add objects
+  handleCollisionObj(buildWorkScene); // add objects
   // add collision objects to world
   planning_scene_interface.addCollisionObjects(
       buildWorkScene.collision_objects);
@@ -444,7 +448,7 @@ int main(int argc, char **argv) {
 
   /*************************ARM tASK LOOP***************/
   while (ros::ok()) {
-    ROS_INFO("Begin main loop, ready for receive command from ge_test")
+    ROS_INFO("Begin main loop, ready for receive command from ge_test");
     // notice main loop that received msg
     if (arm_start_fetch_flag) {
       ROS_INFO("Start grasp objects from shelf/desk");
@@ -525,7 +529,7 @@ int main(int argc, char **argv) {
         // 2. move forward
         geometry_msgs::Pose start = pick_place.get_ee_pose();
         start.orientation = pregrasp_pose.orientation;
-        geometry_msgs::Pose goal = grasp_pose.pose;
+        geometry_msgs::Pose goal = grasp_pose;
         moveLineTarget(start, goal);
       } else {
         presuck_pose = suck_pose;
@@ -537,7 +541,7 @@ int main(int argc, char **argv) {
         // 2. move down
         geometry_msgs::Pose start = pick_place.get_ee_pose();
         start.orientation = presuck_pose.orientation;
-        geometry_msgs::Pose goal = suck_pose.pose;
+        geometry_msgs::Pose goal = suck_pose;
         moveLineTarget(start, goal);
       }
 
@@ -666,7 +670,7 @@ int main(int argc, char **argv) {
         notice_test.notice_pub_sub_pulisher(notice_data);
       }
       // hand data receive judge
-      wait_count = 0;
+      int wait_count = 0;
       while (ros::ok()) {
 
         if (hand_msg_rec_flag == true) {
@@ -904,15 +908,16 @@ void moveToTarget(const std::string &target_name) {
   group.execute(plan);
 }
 
-void moveLineTarget(const geometry_msgs::Pose &start,
+int moveLineTarget(const geometry_msgs::Pose &start,
                     const geometry_msgs::Pose &goal) {
   ROS_INFO("Begin cartesian line plan");
   ROS_INFO_STREAM("Print n to excute the straight line plan");
+  string pause_;
   cin >> pause_;
   if ("n" == pause_) {
     ROS_INFO("READY..............");
   } else {
-    return EXIT_FAILURE;
+    return 0;
   }
 
   // Cartesian Path

@@ -111,6 +111,10 @@ add_executable(visualControl src/visualControl.cpp src/pick_place.cpp)
 target_link_libraries(visualControl add_scene_objects ${catkin_LIBRARIES} ${Boost_LIBRARIES} ${kinova_driver_LIBRARIES})
 install(TARGETS planWithObstacle DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 
+add_executable(mainControl src/mainControl.cpp src/pick_place.cpp)
+target_link_libraries(mainControl add_scene_objects ${catkin_LIBRARIES} ${Boost_LIBRARIES} ${kinova_driver_LIBRARIES})
+install(TARGETS planWithObstacle DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
+
 # python executable scripts
 # install(PROGRAMS
 #   scripts/joint_control.py
