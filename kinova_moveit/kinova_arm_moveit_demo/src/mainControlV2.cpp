@@ -1,6 +1,6 @@
 /*
-=========================JDX pick and place chanllenge===============
-==========================Kinova arm test============================
+*************************JDX pick and place chanllenge*****************
+*************************Kinova arm test*******************************
 This is the main program for handling picking and place task in JDX
 challenge.
 */
@@ -120,17 +120,11 @@ geometry_msgs::Pose pregrasp_mid_test;
 
 // Pose used by Alvin
 geometry_msgs::Pose grasp_pose; // Plan target from kinect --global variable
-geometry_msgs::Pose pregrasp_pose;
-geometry_msgs::Pose
-    gripper_rest_pose; // pre-defined, pose after object is grasped
-geometry_msgs::Pose gripper_place_pose; // pre-defined
-
-geometry_msgs::Pose suck_pose; //
+geometry_msgs::Pose place_pose; // pre-defined
+geometry_msgs::Pose rest_pose;  // pre-defined, pose after object is grasped
+geometry_msgs::Pose suck_pose;  //
 geometry_msgs::Pose presuck_pose;
-geometry_msgs::Pose sucker_place_pose; // pre-defined
-geometry_msgs::Pose
-    sucker_rest_pose; // pre-defined, pose after object is grasped
-
+geometry_msgs::Pose pregrasp_pose;
 geometry_msgs::Pose current_pose; // used to indicate arm state
 
 /***************************NOTICE CLASS****************************/
@@ -327,7 +321,7 @@ void notice_pub_sub::notice_msgCallback(
       grasp_flag = true; // hard obj
     }
   } else if (notice_message.id == 4 && notice_message.data[0] == 1 &&
-             notice_message.data[1] == 8) {
+             notice_message.data[1] == 10) {
     ROS_INFO("Receive command: suck object");
     float x = notice_message.data[2] / 1000.0; // object pose, coordinate x
     float y = notice_message.data[3] / 1000.0; // object pose, coordinate y
@@ -335,8 +329,8 @@ void notice_pub_sub::notice_msgCallback(
     if (abs(x) < 0.5 && y < -0.3) {
       ROS_INFO("Receive valid object position from kinect");
       suck_pose.position.x = x;
-      suck_pose.position.y = y + 0.03; // correction
-      suck_pose.position.z = z + 0.1;  // correction
+      suck_pose.position.y = y;
+      suck_pose.position.z = z;
       // kinect_target_valid = true;
       arm_start_fetch_flag = true;
       grasp_flag = false; // soft obj
@@ -371,37 +365,25 @@ void notice_pub_sub::notice_sub_spinner(char set) {
 void poseInit() {
   grasp_pose.orientation = tf::createQuaternionMsgFromRollPitchYaw(
       1.57, -1.0, 0.0);         // grasp orientation
-  // tf::Quaternion q(0, 0, 0, 1); // suck orientation
-  // suck_pose.orientation.x = q.x();
-  // suck_pose.orientation.y = q.y();
-  // suck_pose.orientation.z = q.z();
-  // suck_pose.orientation.w = q.w();
+  tf::Quaternion q(0, 0, 0, 1); // suck orientation
+  suck_pose.orientation.x = q.x();
+  suck_pose.orientation.y = q.y();
+  suck_pose.orientation.z = q.z();
+  suck_pose.orientation.w = q.w();
 
-  suck_pose.orientation = tf::createQuaternionMsgFromRollPitchYaw(
-      1.57, -1.2, 0.0); // grasp orientation
   // rest pose
-  gripper_rest_pose.orientation = grasp_pose.orientation;
-  gripper_rest_pose.position.x = -0.2;
-  gripper_rest_pose.position.y = -0.3;
-  gripper_rest_pose.position.z = 0.5;
+  rest_pose.orientation = grasp_pose.orientation;
+  rest_pose.position.x = -0.3;
+  rest_pose.position.y = -0.2;
+  rest_pose.position.z = 0.6;
 
-  // gripper place; // pre-defined
-  gripper_place_pose = gripper_rest_pose;
-  gripper_place_pose.position.x = 0.1;
-  gripper_place_pose.position.y = -0.4;
-  gripper_place_pose.position.z = 0.6;
+  //   place_pose; // pre-defined
+  place_pose = rest_pose;
+  place_pose.position.x = 0.1;
+  place_pose.position.y = -0.4;
+  place_pose.position.z = 0.6;
 
-  sucker_rest_pose.orientation = suck_pose.orientation;
-  sucker_rest_pose.position.x = -0.2;
-  sucker_rest_pose.position.y = -0.3;
-  sucker_rest_pose.position.z = 0.5;
-
-  sucker_place_pose = sucker_rest_pose;
-  sucker_place_pose.position.x = 0.1;
-  sucker_place_pose.position.y = -0.4;
-  sucker_place_pose.position.z = 0.6;
-
-  //   gripper_rest_pose;  // pre-defined, pose after object is grasped
+  //   rest_pose;  // pre-defined, pose after object is grasped
 }
 
 // function declaration
@@ -411,13 +393,11 @@ void moveToTarget(const geometry_msgs::Pose &target);
 void moveToTarget(const std::string &target_name);
 void moveToTarget(const geometry_msgs::PoseStamped &target);
 void moveLineTarget(const geometry_msgs::Pose &start,
-                    const geometry_msgs::Pose &goal);
+                   const geometry_msgs::Pose &goal);
 
 int confirmToAct(const geometry_msgs::Pose &start,
-                 const geometry_msgs::Pose &goal, const string &str = "NULL") {
-  cout << "\n"
-       << "=================MOVE TO " + str + "=================="
-       << "\n";
+                  const geometry_msgs::Pose &goal, const string & str = "NULL") {
+  cout <<"\n" << "=================MOVE TO " + str + "==================" << "\n";
   ROS_INFO_STREAM("Move from: " << start << "to " << goal);
   ROS_INFO_STREAM("Confirm info and press n to execute plan");
   string pause_;
@@ -430,9 +410,7 @@ int confirmToAct(const geometry_msgs::Pose &start,
 }
 
 int confirmToAct(const geometry_msgs::Pose &goal, const string &str = "NULL") {
-  cout << "\n"
-       << "=================MOVE TO " + str + "=================="
-       << "\n";
+  cout << "\n" << "=================MOVE TO " + str + "==================" << "\n";  
   ROS_INFO_STREAM("Move to target" << goal);
   ROS_INFO_STREAM("Confirm info and press n to execute plan");
   string pause_;
@@ -535,7 +513,6 @@ int main(int argc, char **argv) {
 
   /*************************ARM tASK LOOP***************/
   int loop_cnt = 0;
-  int wait_count = 0;
   string pose_name = "NO DEFINE";
   while (ros::ok()) {
     loop_cnt++;
@@ -629,7 +606,7 @@ int main(int argc, char **argv) {
         if (DEBUG) {
           start = pregrasp_pose; // virtual pose
         } else {
-          start = pick_place.get_ee_pose(); // real pose from driver info.
+          start =  pick_place.get_ee_pose(); // real pose from driver info.
           start.orientation = pregrasp_pose.orientation;
         }
         geometry_msgs::Pose goal = grasp_pose;
@@ -642,10 +619,10 @@ int main(int argc, char **argv) {
         notice_data.id = 1;
         notice_data.data[0] = 3;
         notice_test.notice_pub_sub_pulisher(notice_data);
-        ROS_INFO("notice hand to close (1 1)");
+        ROS_INFO_ONCE("notice hand to close (1 1)");
 
         // data receive judge
-        wait_count = 0;
+        int wait_count = 0;
         while (ros::ok()) {
 
           if (hand_msg_rec_flag == true) // 1 14
@@ -665,7 +642,7 @@ int main(int argc, char **argv) {
 
         // wait for hand to finished
         while (ros::ok()) {
-          ROS_INFO("waiting for hand to close");
+          ROS_INFO_ONCE("waiting for hand to close");
           if (hand_act_finished_flag) // 1 2
           {
             hand_act_finished_flag = false;
@@ -684,20 +661,12 @@ int main(int argc, char **argv) {
         }
 
         goal = pregrasp_pose;
-        goal.position.z += 0.06;
-        pose_name = "PREGRASP (UP)";
-        confirmToAct(start, goal, pose_name);
-        moveLineTarget(start, goal);
-
-        start = goal;
-        goal.position.y += PREGRASP_OFFSET;
         pose_name = "PREGRASP (BACK)";
-        confirmToAct(start, goal, pose_name);
+        confirmToAct(start, goal,pose_name);
         moveLineTarget(start, goal);
-
         pose_name = "REST POSE";
-        confirmToAct(pregrasp_pose, gripper_rest_pose, pose_name);
-        moveToTarget(gripper_rest_pose);
+        confirmToAct(pregrasp_pose, rest_pose, pose_name);
+        moveToTarget(rest_pose);
 
       } else {
         // suck mode
@@ -739,15 +708,11 @@ int main(int argc, char **argv) {
         notice_data.id = 1;
         notice_data.data[0] = 4;
         notice_test.notice_pub_sub_pulisher(notice_data);
-        ROS_INFO("switch to suck mode (1 4)");
+        ROS_INFO_ONCE("notice hand to close (1 1)");
 
         // wait switch finish
-        wait_count = 0;
         while (ros::ok()) {
-          wait_count++;
-          if (wait_count % 100 == 0) {
-            ROS_INFO("waiting switch to suck");
-          }
+          ROS_INFO_ONCE("waiting switch to suck");
           if (hand_act_finished_flag) // 1 2
           {
             hand_act_finished_flag = false;
@@ -761,10 +726,10 @@ int main(int argc, char **argv) {
         notice_data.id = 1;
         notice_data.data[0] = 8;
         notice_test.notice_pub_sub_pulisher(notice_data);
-        ROS_INFO("notice sucker to suck (1 8)");
+        ROS_INFO_ONCE("notice hand to suck (1 1)");
 
         // data receive judge
-        wait_count = 0;
+        int wait_count = 0;
         while (ros::ok()) {
 
           if (hand_msg_rec_flag == true) // 1 14
@@ -773,7 +738,7 @@ int main(int argc, char **argv) {
             break;
           }
           wait_count++;
-          if (wait_count % 100 == 0) // send msg again after waiting 1s
+          if (wait_count % 4 == 0) // send msg again after waiting 1s
           {
             ROS_ERROR("jaco didn't receive hand msg,Retrying...");
             notice_test.notice_pub_sub_pulisher(notice_data);
@@ -783,12 +748,8 @@ int main(int argc, char **argv) {
         }
 
         // wait for hand to finished
-        wait_count = 0;
         while (ros::ok()) {
-          wait_count++;
-          if (wait_count % 100 == 0) {
-            ROS_INFO("waiting for suck");
-          }
+          ROS_INFO_ONCE("waiting for hand to close");
           if (hand_act_finished_flag) // 1 2
           {
             hand_act_finished_flag = false;
@@ -822,8 +783,8 @@ int main(int argc, char **argv) {
         confirmToAct(start, goal, pose_name);
         moveLineTarget(start, goal); // back
         pose_name = "SUCK REST POSE";
-        confirmToAct(presuck_pose, sucker_rest_pose);
-        moveToTarget(sucker_rest_pose);
+        confirmToAct(presuck_pose, rest_pose);
+        moveToTarget(rest_pose);
       }
 
       // notice main loop that fetch action finished
@@ -832,12 +793,12 @@ int main(int argc, char **argv) {
       notice_data.data[0] = 15;
       notice_test.notice_pub_sub_pulisher(notice_data);
       arm_start_fetch_flag = false;
-      ROS_INFO("grasp task finished");
+      ROS_INFO_ONCE("grasp task finished");
     }
 
     // wait for main loop to keep pose
     // while (ros::ok()) {
-    //   ROS_INFO("waiting for main loop to start arm to keep pose");
+    //   ROS_INFO_ONCE("waiting for main loop to start arm to keep pose");
     //   if (arm_keep_fetch_flag) // 4 2
     //   {
     //     arm_keep_fetch_flag = false;
@@ -872,15 +833,9 @@ int main(int argc, char **argv) {
       ROS_ERROR("---------- 4 14");
 
       // 1. place
-      if (grasp_flag) {
-        pose_name = "GRIPPER PLACE POSE";
-        confirmToAct(gripper_place_pose, pose_name);
-        moveToTarget(gripper_place_pose);
-      } else {
-        pose_name = "SUCKER PLACE POSE";
-        confirmToAct(sucker_place_pose, pose_name);
-        moveToTarget(sucker_place_pose);
-      }
+      pose_name = "PLACE POSE";
+      confirmToAct(place_pose, pose_name);
+      moveToTarget(place_pose);
 
       // 2. open hand
       notice_data_clear(&notice_data);
@@ -938,16 +893,9 @@ int main(int argc, char **argv) {
       ROS_INFO("placing action finished\n");
 
       // back to rest pose
-      if (grasp_flag) {
-        pose_name = "GRIPPER REST POSE";
-        confirmToAct(gripper_place_pose, gripper_rest_pose, pose_name);
-        moveToTarget(gripper_rest_pose);
-      } else {
-        pose_name = "SUCKER REST POSE";
-        confirmToAct(sucker_place_pose, sucker_rest_pose, pose_name);
-        moveToTarget(sucker_rest_pose);
-      }
-
+      pose_name = "REST POSE";
+      confirmToAct(place_pose, rest_pose, pose_name);
+      moveToTarget(rest_pose);
       arm_release_obj_flag = false;
       // sleep(10); // TODO change time to wait
     }
@@ -1067,8 +1015,7 @@ void moveToTarget(const geometry_msgs::PoseStamped &target) {
 
 // Update--Alvin
 void moveToTarget(const geometry_msgs::Pose &target) {
-  // ROS_INFO_STREAM("Move to : " << target.position.x << ", " <<
-  // target.position.y
+  // ROS_INFO_STREAM("Move to : " << target.position.x << ", " << target.position.y
   //                              << ", " << target.position.z << ", "
   //                              << target.orientation.x << ", "
   //                              << target.orientation.y);
@@ -1148,7 +1095,7 @@ void moveToTarget(const std::string &target_name) {
 }
 
 void moveLineTarget(const geometry_msgs::Pose &start,
-                    const geometry_msgs::Pose &goal) {
+                   const geometry_msgs::Pose &goal) {
   ROS_INFO("Begin cartesian line plan");
   // ROS_INFO_STREAM("Print n to excute the straight line plan");
   // string pause_;
