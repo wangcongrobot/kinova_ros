@@ -35,31 +35,30 @@
 
 using namespace std;
 #define PREGRASP_OFFSET 0.20;
+#define DEBUG true;
+typedef int ERROR_NO;
+// hand flags
+bool hand_rec_msg_flag = false;
+bool hand_act_finish_flag = false;
+bool arm_rec_msg_flag = false;
 
 string robot_name = "j2n6s300";
-geometry_msgs::PoseStamped goal_pose;
-darknet_ros_msgs::TargetPoint canPoint;
-bool receive_msg_flag = false;
+geometry_msgs::Pose goal_pose;
 
 void kinectCallback(const darknet_ros_msgs::TargetPoints::ConstPtr& msg)
 {
-    //  TODO
-    // if (msg->target_points == NONE)
-    //   return;
-    if (receive_msg_flag == false) {
+    if (arm_rec_msg_flag == false) {
         for (int i = 0; msg->target_points.size(); i++) {
             if (msg->target_points[i].Class == "can") {
-                canPoint = msg->target_points[i];
+                darknet_ros_msgs::TargetPoint canPoint = msg->target_points[i];
                 break;
             }
         }
-        goal_pose.header.frame_id = "root";
-        goal_pose.pose.position.x = canPoint.camera_x;
-        goal_pose.pose.position.y = canPoint.camera_y;
-        goal_pose.pose.position.z = canPoint.camera_z + 0.03;
-        goal_pose.pose.orientation = tf::createQuaternionMsgFromRollPitchYaw(1.57, -1.0, 0.0);
-        receive_msg_flag = true;
-
+        goal_pose.position.x = canPoint.camera_x;
+        goal_pose.position.y = canPoint.camera_y;
+        goal_pose.position.z = canPoint.camera_z + 0.03;
+        goal_pose.orientation = tf::createQuaternionMsgFromRollPitchYaw(1.57, -1.0, 0.0);
+        arm_rec_msg_flag = true;
         ROS_INFO_STREAM("Get object pose from kinect");
     } else
         return;
@@ -123,70 +122,6 @@ void notice_pub_sub::notice_msgCallback(const id_data_msgs::ID_Data::ConstPtr& n
     for (char i = 0; i < 8; i++) notice_message.data[i] = notice_msg->data[i];
 
     notice_pub_sub::notice_display(notice_message, true);
-
-    //     //1,navigation section
-    //     if(notice_message.id==2 && notice_message.data[0]==14)//msg received
-    //     flag
-    //     {
-    //         nav_msg_rec_flag=true;
-    //     }
-    //     if(notice_message.id==2 && notice_message.data[0]==15)//nav finished
-    //     flag
-    //     {
-    //         nav_finished_flag=true;
-    //     }
-    //     if(notice_message.id==2 && notice_message.data[0]==16)//nav finished
-    //     flag
-    //     {
-    //         set_ontime++;
-    //         ROS_WARN("ON TIME No.%d",set_ontime);
-    //     }
-    //     if(notice_message.id==2 && notice_message.data[0]==8)
-    //     {
-    //         command_move_finished_flag=true;
-    //         ROS_INFO("Received dashgo command move finished flag");
-    //     }
-
-    //     //2,kinect scan section
-    //     if(notice_message.id==3 && notice_message.data[0]==14)//kinect msg
-    //     received flag
-    //     {
-    //         kinect_msg_rec_flag=true;
-    //     }
-    //     if(notice_message.id==3 && notice_message.data[0]==15)//kinect scan
-    //     finished flag
-    //     {
-    //         kinect_scan_finished_flag=true;
-    //     }
-    //     if(notice_message.id==3 && notice_message.data[0]==13)//kinect scan
-    //     failed
-    //     {
-    // //        id_data_msgs::ID_Data id_data;
-    // //        id_data.id=3;
-    // //        for(int count=0;count<8;count++) id_data.data[count]=0;
-    // //        id_data.data[0]=1;
-    // //        notice_publisher.publish(id_data);
-
-    //         row[obj_num]=row[obj_cnt-1];
-    //         column[obj_num]=column[obj_cnt-1];
-    //         obj_num++;
-    //         kinect_reset_flag=true;
-    //         ROS_WARN("Received missing current column flag.Save data
-    //         No.%d,Row:%d,Col%d",obj_cnt,row[obj_cnt-1],column[obj_cnt-1]);
-    //         kinect_scan_finished_flag=true;
-
-    //     }
-    //     //3,arm control section
-    //     if(notice_message.id==4 && notice_message.data[0]==14)//arm control msg
-    //     received flag
-    //     {
-    //         arm_msg_rec_flag=true;
-    //     }
-    //     if(notice_message.id==4 && notice_message.data[0]==15)//arm fetch
-    //     finished flag
-    //     {
-    //         arm_act_finished_flag=true;
-    //     }
 }
 
 void notice_pub_sub::notice_sub_spinner(char set)
@@ -201,12 +136,6 @@ void notice_pub_sub::notice_data_clear(id_data_msgs::ID_Data* test)
     for (int i = 0; i < 8; i++) test->data[i] = 0;
 }
 
-// get end effector state
-// void getCurrentState(const geometry_msgs::PoseStampedConstPtr &msg) {
-//   ROS_INFO("Get current state from kinova driver");
-//   current_pose_ = *msg;
-// }
-
 int main(int argc, char** argv)
 {
     ros::init(argc, argv, "visualControl");
@@ -214,11 +143,10 @@ int main(int argc, char** argv)
     id_data_msgs::ID_Data notice_data_pub;
 
     // dfault target value
-    goal_pose.header.frame_id = "root";
-    // goal_pose.pose.position.x = -0.2;
-    // goal_pose.pose.position.y = -0.4;
-    // goal_pose.pose.position.z = 0.5;
-    goal_pose.pose.orientation = tf::createQuaternionMsgFromRollPitchYaw(1.57, -1.0, 0.0);
+    // goal_pose.position.x = -0.2;
+    // goal_pose.position.y = -0.4;
+    // goal_pose.position.z = 0.5;
+    goal_pose.orientation = tf::createQuaternionMsgFromRollPitchYaw(1.57, -1.0, 0.0);
 
     if (argc < 4) {
         ROS_INFO(" ");
@@ -232,9 +160,9 @@ int main(int argc, char** argv)
 
     } else {
         ROS_INFO("Plan with manually defined target point ");
-        goal_pose.pose.position.x = atof(argv[1]);
-        goal_pose.pose.position.y = atof(argv[2]);
-        goal_pose.pose.position.z = atof(argv[3]);
+        goal_pose.position.x = atof(argv[1]);
+        goal_pose.position.y = atof(argv[2]);
+        goal_pose.position.z = atof(argv[3]);
     }
 
     ros::NodeHandle nh;
@@ -247,217 +175,45 @@ int main(int argc, char** argv)
     ros::Subscriber subKinect = nh.subscribe("/darknet_ros/target_points", 100, kinectCallback);
     ros::spinOnce();
 
-    ROS_INFO_STREAM("Target object position:" << goal_pose.pose.position.x << ","
-                                              << goal_pose.pose.position.y << ","
-                                              << goal_pose.pose.position.z);
+    ROS_INFO_STREAM("Target object position:" << goal_pose.position.x << "," << goal_pose.position.y
+                                              << "," << goal_pose.position.z);
 
-    // if (atof(argv[2]) > -0.15) {
-    //   ROS_INFO("Wrong posiiton, y value should be less then -0.15");
-    //   return EXIT_FAILURE;
-    // }
-    ROS_INFO("Check object pose returned form kinect, print n to next");
-    string pause_;
-    cin >> pause_;
-    if ("n" == pause_) {
-        ROS_INFO("Validate target pose, proceed to next");
-    } else {
-        return EXIT_FAILURE;
-    }
-
-    // the end-effector frame is declared in moveit config, can not be changed
-    // group_arm.setEndEffectorLink("j2n6s300_link_6");
-
-    // add collision objects to robot working space
-    ROS_INFO("Insert scene objects in workspace");
-    build_workScene buildWorkScene(nh);
-    geometry_msgs::Pose tablePose, kinectBasePose, kinectBodyPose;
-
-    tablePose.position.x = 0;
-    tablePose.position.y = 0;
-    tablePose.position.z = 0.1; // avoid collision between arm and surface
-    buildWorkScene.add_boxModel("table", 1.5, 1.5, 0.01, tablePose);
-
-    // add kinect stick obstacle
-    kinectBasePose.position.x = 0.35;
-    kinectBasePose.position.y = 0;
-    kinectBasePose.position.z = 0.4;
-    tf::Quaternion qkinect = tf::createQuaternionFromRPY(0, 1.57, 1.57);
-    // tf::Quaternion qkinect = tf::createQuaternionFromRPY(0, 1.57, 0);
-    // ROS_INFO_STREAM("Kinect obs pose: " << qkinect);
-    kinectBasePose.orientation.x = qkinect[0];
-    kinectBasePose.orientation.y = qkinect[1];
-    kinectBasePose.orientation.z = qkinect[2];
-    kinectBasePose.orientation.w = qkinect[3];
-    buildWorkScene.add_boxModel("kinectBase", 0.6, 0.03, 0.02, kinectBasePose);
-
-    // add kinect body obstacle
-    kinectBodyPose.position.x = 0.35;  // 0.35 VS 0.3
-    kinectBodyPose.position.y = -0.05; //-0.05 VS 0
-    kinectBodyPose.position.z = 0.75;  // 0.75
-    tf::Quaternion qbody = tf::createQuaternionFromRPY(0, 0, -1.57);
-    // tf::Quaternion qbody = tf::createQuaternionFromRPY(0, -0.26, 0);
-    // ROS_INFO_STREAM("Kinect obs pose: " << qbody);
-    kinectBodyPose.orientation.x = qbody[0];
-    kinectBodyPose.orientation.y = qbody[1];
-    kinectBodyPose.orientation.z = qbody[2];
-    kinectBodyPose.orientation.w = qbody[3];
-    buildWorkScene.add_boxModel("kinectBody", 0.1, 0.3, 0.1, kinectBodyPose);
+    /**********************ADD COLLISION***************************/
+    ROS_INFO("Add collision objects  into the world (kinect and mobile base)");
     moveit::planning_interface::PlanningSceneInterface planning_scene_interface;
-
-    // add collision objects to world
-    planning_scene_interface.addCollisionObjects(buildWorkScene.collision_objects);
-
+    build_workScene buildWorkScene(nh);
+    handleCollisionObj(buildWorkScene); // add objects
+    planning_scene_interface.addCollisionObjects(
+        buildWorkScene.collision_objects); // add collision objects into world
     ROS_INFO("Collision setup finished");
 
     // select group of joints
-    geometry_msgs::PoseStamped pregrasp_pose = goal_pose;
-    pregrasp_pose.pose.position.y += PREGRASP_OFFSET;
-    static const std::string PLANNING_GROUP = "arm";
-    moveit::planning_interface::MoveGroup group_arm("arm");
-    ROS_INFO_STREAM("Planning to move " << group_arm.getEndEffectorLink()
-                                        << " to a target pose expressed in "
-                                        << group_arm.getPlanningFrame() << " with obstacles");
-    // const robot_state::JointModelGroup *joint_model_group =
-    //     group_arm.getCurrentState()->getJointModelGroup(PLANNING_GROUP);
+    geometry_msgs::Pose pregrasp_pose = goal_pose;
+    pregrasp_pose.position.y += PREGRASP_OFFSET;
+    geometry_msgs::Pose gripper_rest_pose = pregrasp_pose;
+    gripper_rest_pose.position.x = 0.2;
+    gripper_rest_pose.position.y = -0.3;
+    gripper_rest_pose.position.z = 0.4;
 
-    // choose your preferred planner, the following planner works bad
-    // group_arm.setPlannerId("SBLkConfigDefault");
-    group_arm.setPoseReferenceFrame("world");
-    group_arm.setPoseTarget(pregrasp_pose);
-    ROS_INFO_STREAM("Object postion: " << pregrasp_pose.pose.position.x << ", "
-                                       << pregrasp_pose.pose.position.y << ", "
-                                       << pregrasp_pose.pose.position.z);
-    group_arm.setStartStateToCurrentState();
-    group_arm.setMaxVelocityScalingFactor(0.6);
+    // 1. pregrasp
+    string pose_name = "PREGRASP POSE";
+    confirmToAct(pregrasp_pose, pose_name);
+    moveToTarget(pregrasp_pose); // plan to pre-grasp pose
 
-    moveit::planning_interface::MoveGroup::Plan my_plan;
-    // set maximum time to find a plan
-    group_arm.setPlanningTime(5.0);
-    bool success = group_arm.plan(my_plan);
-
-    if (!success) throw std::runtime_error("No plan found");
-
-    ROS_INFO_STREAM("Plan found in " << my_plan.planning_time_ << " seconds");
-
-    // Execute the plan
-    ros::Time start = ros::Time::now();
-
-    group_arm.move();
-
-    ROS_INFO_STREAM("Motion duration: " << (ros::Time::now() - start).toSec());
-
-    /**************************stretch stage*******************/
-    sleep(3);
-
-    // get current pose
-    // tf::TransformListener listener;
-    // while (ros::ok()) {
-    //   listener.transformPoint(robot_name + "_link_base", ee_pose,
-    //   current_pose);
-
-    //   ROS_INFO(
-    //       "current pose: (%.2f, %.2f. %.2f) -----> base_link: (%.3f, %.3f,
-    //       "
-    //       "%.3f) at time %.2f",
-    //       ee_pose.point.x, ee_pose.point.y, ee_pose.point.z,
-    //       current_pose.point.x, current_pose.point.y, current_pose.point.z,
-    //       current_pose.header.stamp.toSec());
-    // } catch (tf::TransformException &ex) {
-    //   ROS_ERROR("Received an exception trying to transform a point from "
-    //             "\"ee_frame\" to \"base_link\": %s",
-    //             ex.what());
-    //   tf::StampedTransform transform;
-    //   try {
-    //     listener.lookupTransform("/root", "/j2n6s300_link_6", ros::Time(0),
-    //                              transform);
-    //   } catch (tf::TransformException ex) {
-    //     ROS_ERROR("%s", ex.what());
-    //     ros::Duration(1.0).sleep();
-    //   }
-
-    //   if (abs(transform.getOrigin().x() - pregrasp_pose.pose.position.x) < 0.2)
-    //   {
-    //     current_pose.position.x = transform.getOrigin().x();
-    //     current_pose.position.y = transform.getOrigin().y();
-    //     current_pose.position.z = transform.getOrigin().z();
-
-    //     tf::Quaternion q = transform.getRotation();
-    //     current_pose.orientation.x = q.x();
-    //     current_pose.orientation.y = q.y();
-    //     current_pose.orientation.z = q.z();
-    //     current_pose.orientation.w = q.w();
-
-    //     // end effector point
-    //     pick_place.get_current_pose();
-
-    //     break;
-    //   }
-    // }
-
-    geometry_msgs::Pose current_pose;
-    current_pose = pick_place.get_ee_pose();
-    current_pose.orientation = pregrasp_pose.pose.orientation; // target pose
-
-    ROS_INFO("CURRENT POSE: (%.2f, %.2f. %.2f) -----> PREGRASP POSE: (%.3f, "
-             "%.3f,%.3f) at time %.2f",
-        current_pose.position.x, current_pose.position.y, current_pose.position.z,
-        pregrasp_pose.pose.position.x, pregrasp_pose.pose.position.y, pregrasp_pose.pose.position.z,
-        pregrasp_pose.header.stamp.toSec());
-
-    ROS_INFO("Begin cartesian line plan");
-    ROS_INFO_STREAM("Print n to excute the straight line plan");
-    cin >> pause_;
-    if ("n" == pause_) {
-        ROS_INFO("READY..............");
+    // 2. move forward
+    geometry_msgs::Pose start;
+    if (DEBUG) {
+        start = pregrasp_pose; // virtual pose
     } else {
-        return EXIT_FAILURE;
+        start = pick_place.get_ee_pose(); // real pose from driver info.
+        start.orientation = pregrasp_pose.orientation;
     }
+    geometry_msgs::Pose goal = grasp_pose;
+    pose_name = "TARGET AND GRASP";
+    confirmToAct(start, goal, pose_name);
+    moveLineTarget(start, goal);
 
-    // Cartesian Path
-    geometry_msgs::Pose way_pose = current_pose;
-
-    std::vector<geometry_msgs::Pose> waypoints;
-    waypoints.push_back(way_pose); // first pose waypoint
-    int num_waypoint = 5;
-    float delta_x = (goal_pose.pose.position.x - current_pose.position.x) / (num_waypoint - 1);
-    float delta_y = (goal_pose.pose.position.y - current_pose.position.y) / (num_waypoint - 1);
-    float delta_z = (goal_pose.pose.position.z - current_pose.position.z) / (num_waypoint - 1);
-
-    // interplotate between current pose and target pose
-    for (int i = 0; i < num_waypoint - 1; i++) {
-        way_pose.position.x += delta_x;
-        way_pose.position.y += delta_y;
-        way_pose.position.z += delta_z;
-        waypoints.push_back(way_pose);
-    }
-
-    group_arm.setMaxVelocityScalingFactor(0.2);
-    moveit_msgs::RobotTrajectory trajectory;
-    const double jump_threshold = 0.0;
-    const double eef_step = 0.01;
-    double fraction
-        = group_arm.computeCartesianPath(waypoints, eef_step, jump_threshold, trajectory);
-    // ROS_INFO_NAMED("tutorial",
-    //                "Visualizing plan (Cartesian path) (%.2f%% acheived)",
-    //                fraction * 100.0);
-
-    // joint_name_size = trajectory.joint_trajectory.joint_names.size();
-    // plan_point_size = trajectory.joint_trajectory.points.size();
-    // std::cout << "joint_name size:" << joint_name_size << std::endl;
-    // std::cout << "points  size:" << plan_point_size << std::endl;
-    // for (int i = 0; i < joint_name_size; i++) {
-    //   ROS_INFO("joint name:%s",
-    //            trajectory.joint_trajectory.joint_names[i].c_str());
-    // }
-    // ROS_INFO_STREAM("Last point of Plan:"
-    //                 << trajectory.joint_trajectory.points[plan_point_size -
-    //                 1]);
-
-    moveit::planning_interface::MoveGroup::Plan cartesian_plan;
-    cartesian_plan.trajectory_ = trajectory;
-    group_arm.execute(cartesian_plan);
-
-    // GRASP TEST HK
+    // 3. GRASP TEST HK
     ROS_INFO("Begin grasp demo, press n to next:");
     cin >> pause_;
 
@@ -470,12 +226,311 @@ int main(int argc, char** argv)
 
     notice_test.notice_data_clear(&notice_data_pub);
     notice_data_pub.id = 1;
-    notice_data_pub.data[0] = 1;
-    notice_test.notice_pub_sub_pulisher(notice_data_pub);
-
+    notice_data_pub.data[0] = 3;
+    // notice_test.notice_pub_sub_pulisher(notice_data_pub);
+    ERROR_NO err = hand_MsgConform_ActFinishedWait(
+        notice_data, hand_msg_rec_flag, hand_act_finished_flag, notice_test);
+    error_deal(err);
     ros::Duration(5).sleep();
 
-    spinner.stop();
+    // 4. move to rest pose
+    if (DEBUG) {
+        start = grasp_pose;
+    } else {
+        start = pick_place.get_ee_pose();
+        start.orientation = pregrasp_pose.orientation;
+    }
 
+    goal = pregrasp_pose;
+    goal.position.z += 0.06;
+    pose_name = "PREGRASP (UP)";
+    confirmToAct(start, goal, pose_name);
+    moveLineTarget(start, goal);
+
+    start = goal;
+    goal.position.y += PREGRASP_OFFSET;
+    pose_name = "PREGRASP (BACK)";
+    confirmToAct(start, goal, pose_name);
+    moveLineTarget(start, goal);
+
+    pose_name = "REST POSE";
+    confirmToAct(pregrasp_pose, gripper_rest_pose, pose_name);
+    moveToTarget(gripper_rest_pose);
+
+    spinner.stop();
     return EXIT_SUCCESS;
+}
+
+// Cartesian line plan
+void moveLineTarget(const geometry_msgs::Pose& start, const geometry_msgs::Pose& goal)
+{
+    ROS_INFO("Begin cartesian line plan");
+    geometry_msgs::Pose way_pose = start;
+
+    std::vector<geometry_msgs::Pose> waypoints;
+    waypoints.push_back(way_pose); // first pose waypoint
+    int num_waypoint = 5;
+    float delta_x = (goal.position.x - start.position.x) / (num_waypoint - 1);
+    float delta_y = (goal.position.y - start.position.y) / (num_waypoint - 1);
+    float delta_z = (goal.position.z - start.position.z) / (num_waypoint - 1);
+
+    // interplotate between current pose and target pose
+    for (int i = 0; i < num_waypoint - 1; i++) {
+        way_pose.position.x += delta_x;
+        way_pose.position.y += delta_y;
+        way_pose.position.z += delta_z;
+        waypoints.push_back(way_pose);
+    }
+
+    moveit::planning_interface::MoveGroup group("arm");
+    group.setGoalPositionTolerance(0.01);    // 3cm
+    group.setGoalOrientationTolerance(0.01); // 5.729576129 * 2 deg
+    group.setMaxVelocityScalingFactor(0.5);
+    moveit_msgs::RobotTrajectory trajectory;
+    const double jump_threshold = 0.0;
+    const double eef_step = 0.01;
+    double fraction = group.computeCartesianPath(waypoints, eef_step, jump_threshold, trajectory);
+
+    moveit::planning_interface::MoveGroup::Plan cartesian_plan;
+    cartesian_plan.trajectory_ = trajectory;
+    group.execute(cartesian_plan);
+}
+
+int confirmToAct(
+    const geometry_msgs::Pose& start, const geometry_msgs::Pose& goal, const string& str = "NULL")
+{
+    cout << "\n"
+         << "=================MOVE TO " + str + "=================="
+         << "\n";
+    ROS_INFO_STREAM("Move from: " << start << "to " << goal);
+    ROS_INFO_STREAM("Confirm info and press n to execute plan");
+    string pause_;
+    cin >> pause_;
+    if ("n" == pause_) {
+        ROS_INFO_STREAM("Valid plan, begin to execute");
+    } else {
+        return 0;
+    }
+}
+
+int confirmToAct(const geometry_msgs::Pose& goal, const string& str = "NULL")
+{
+    cout << "\n"
+         << "=================MOVE TO " + str + "=================="
+         << "\n";
+    ROS_INFO_STREAM("Move to target" << goal);
+    ROS_INFO_STREAM("Confirm info and press n to execute plan");
+    string pause_;
+    cin >> pause_;
+    if ("n" == pause_) {
+        ROS_INFO_STREAM("Valid plan, begin to execute");
+    } else {
+        return 0;
+    }
+}
+
+void error_deal(int error_nu)
+{
+    switch (error_nu) {
+    case 1: {
+        ROS_ERROR("Hand doesn't work normally!");
+        break;
+    }
+    case 2: {
+        ROS_ERROR("Dashgo doesn't work normally!");
+        break;
+    }
+    case 3: {
+        ROS_ERROR("Kinect doesn't work normally!");
+        break;
+    }
+    case 4: {
+        ROS_ERROR("Kinova Arm doesn't work normally!");
+        break;
+    }
+    default:
+        break;
+    }
+}
+
+// Update--Alvin: Plan with Pose target
+void moveToTarget(const geometry_msgs::Pose& target)
+{
+    moveit::planning_interface::MoveGroup group("arm");
+    group.setGoalPositionTolerance(0.01);    // 3cm
+    group.setGoalOrientationTolerance(0.01); // 5.729576129 * 2 deg
+    group.setMaxVelocityScalingFactor(0.5);
+    // group.setNumPlanningAttempts(1);
+    group.setStartStateToCurrentState();
+    group.setPoseTarget(target);
+
+    ROS_INFO_STREAM("Planning to move " << group.getEndEffectorLink() << " with respect to frame  "
+                                        << group.getPlanningFrame() << " with obstacles");
+
+    moveit::planning_interface::MoveGroup::Plan my_plan;
+    group.setPlanningTime(3.0);
+
+    int loops = 10; // planing tries
+    bool success = group.plan(my_plan);
+
+    for (int i = 0; i < loops; i++) {
+        success = group.plan(my_plan);
+        if (success) {
+            ROS_INFO_STREAM("Plan found in " << my_plan.planning_time_ << " seconds");
+            break;
+            // TODO: choose plans according to measures
+        } else {
+            ROS_INFO("Plan failed at try: %d", i);
+        }
+    }
+
+    if (!success) ROS_INFO("No plan found after 10 tries");
+    // Execute the plan
+    ros::Time start = ros::Time::now();
+    group.execute(my_plan);
+    ROS_INFO_STREAM("Motion duration: " << (ros::Time::now() - start).toSec());
+}
+
+void notice_data_clear(id_data_msgs::ID_Data* test)
+{
+    test->id = 0;
+    for (int i = 0; i < 8; i++) test->data[i] = 0;
+}
+
+ERROR_NO hand_MsgConform_ActFinishedWait(id_data_msgs::ID_Data* notice_data_test,
+    bool* msg_rec_flag, bool* finished_flag, notice_pub_sub* notice_test)
+{
+    id_data_msgs::ID_Data notice_data;
+    int loop_hz = 10;
+    ros::Rate loop_rate(loop_hz);
+
+    notice_data_clear(&notice_data);
+    notice_data.id = notice_data_test->id;
+    for (int i = 0; i < 8; i++) notice_data.data[i] = notice_data_test->data[i];
+    notice_test->notice_pub_sub_pulisher(notice_data);
+
+    // hand data receive judge
+    int wait_count = 0;
+    while (ros::ok()) {
+        if (*msg_rec_flag == true) {
+            *msg_rec_flag = false;
+            wait_count = 0; // reset time for next loop
+            break;
+        }
+
+        wait_count++;
+        if (wait_count % 100 == 0) // send msg again after waiting 1s
+        {
+            ROS_ERROR("Hand didn't receive msg, retrying...");
+        }
+        notice_test->notice_pub_sub_pulisher(notice_data);
+
+        if (wait_count >= 10000) {
+            error_no = notice_data.id;
+            goto next;
+        }
+        notice_test->notice_sub_spinner(1);
+        loop_rate.sleep();
+    }
+    // hand action finish judge
+    while (ros::ok()) {
+        if (*finished_flag == true) {
+            *finished_flag = false;
+            break;
+        }
+        wait_count++;
+        if (wait_count % 100 == 0) // send msg again after waiting 1s
+        {
+            ROS_ERROR("Waiting for hand to grasp/suck...");
+        }
+        notice_test->notice_sub_spinner(1);
+        loop_rate.sleep();
+    }
+
+next:
+    return error_no;
+}
+
+void handleCollisionObj(build_workScene& buildWorkScene)
+{
+
+    //   buildWorkScene.clear_WorkScene("table");
+    //   buildWorkScene.clear_WorkScene("kinectBody");
+    //   buildWorkScene.clear_WorkScene("kinectObs");
+
+    geometry_msgs::Pose tablePose, kinectBasePose, kinectBodyPose;
+
+    tablePose.position.x = 0.4;
+    tablePose.position.y = 0;
+    tablePose.position.z = 0.1; // avoid collision between arm and surface
+    buildWorkScene.add_boxModel("table", 1.0, 0.5, 0.01, tablePose);
+
+    // add kinect stick obstacle
+    kinectBasePose.position.x = 0.4;
+    kinectBasePose.position.y = 0;
+    kinectBasePose.position.z = 0.4;
+    tf::Quaternion qkinect = tf::createQuaternionFromRPY(0, 1.57, 1.57);
+    // tf::Quaternion qkinect = tf::createQuaternionFromRPY(0, 1.57, 0);
+    // ROS_INFO_STREAM("Kinect obs pose: " << qkinect);
+    kinectBasePose.orientation.x = qkinect[0];
+    kinectBasePose.orientation.y = qkinect[1];
+    kinectBasePose.orientation.z = qkinect[2];
+    kinectBasePose.orientation.w = qkinect[3];
+    buildWorkScene.add_boxModel("kinectBase", 0.8, 0.03, 0.02, kinectBasePose);
+
+    // add kinect body obstacle
+    kinectBodyPose.position.x = 0.4;   // 0.35 VS 0.3
+    kinectBodyPose.position.y = -0.05; //-0.05 VS 0
+    kinectBodyPose.position.z = 0.70;  // 0.75
+    tf::Quaternion qbody = tf::createQuaternionFromRPY(0, 0, -1.57);
+    // tf::Quaternion qbody = tf::createQuaternionFromRPY(0, -0.26, 0);
+    // ROS_INFO_STREAM("Kinect obs pose: " << qbody);
+    kinectBodyPose.orientation.x = qbody[0];
+    kinectBodyPose.orientation.y = qbody[1];
+    kinectBodyPose.orientation.z = qbody[2];
+    kinectBodyPose.orientation.w = qbody[3];
+    buildWorkScene.add_boxModel("kinectBody", 0.1, 0.3, 0.1, kinectBodyPose);
+}
+
+geometry_msgs::Pose getCurrentState()
+{
+    geometry_msgs::Pose current_pose;
+    tf::TransformListener listener;
+    while (ros::ok()) {
+        // try {
+        //     listener.transformPoint(robot_name + "_link_base", ee_pose, current_pose);
+
+        //     ROS_INFO("current pose: (%.2f, %.2f. %.2f) -----> base_link: (%.3f, %.3f,
+        //              "
+        //              "%.3f) at time %.2f",
+        //         ee_pose.point.x, ee_pose.point.y, ee_pose.point.z, current_pose.point.x,
+        //         current_pose.point.y, current_pose.point.z, current_pose.header.stamp.toSec());
+        // } catch (tf::TransformException& ex) {
+        //     ROS_ERROR("Received an exception trying to transform a point from "
+        //               "\"ee_frame\" to \"base_link\": %s",
+        //         ex.what());
+        // }
+
+        tf::StampedTransform transform;
+        try {
+            listener.lookupTransform("/root", "/j2n6s300_link_6", ros::Time(0), transform);
+        } catch (tf::TransformException ex) {
+            ROS_ERROR("%s", ex.what());
+            ros::Duration(1.0).sleep();
+        }
+
+        current_pose.position.x = transform.getOrigin().x();
+        current_pose.position.y = transform.getOrigin().y();
+        current_pose.position.z = transform.getOrigin().z();
+
+        tf::Quaternion q = transform.getRotation();
+        current_pose.orientation.x = q.x();
+        current_pose.orientation.y = q.y();
+        current_pose.orientation.z = q.z();
+        current_pose.orientation.w = q.w();
+
+        // end effector point
+        // pick_place.get_current_pose();
+        return current_pose;
+    }
 }
