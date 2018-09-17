@@ -321,7 +321,7 @@ void notice_pub_sub::notice_msgCallback(const id_data_msgs::ID_Data::ConstPtr& n
             suck_pose.position.z = z + 0.1;  // correction
             // kinect_target_valid = true;
             arm_start_fetch_flag = true;
-            use_gripper_flag = false; 
+            use_gripper_flag = false;
         } else {
             ROS_INFO("Invalid target pose, suck task cancelled");
         }
@@ -362,25 +362,25 @@ void poseInit()
         = tf::createQuaternionMsgFromRollPitchYaw(1.57, -1.2, 0.0); // grasp orientation
     // rest pose
     gripper_rest_pose.orientation = grasp_pose.orientation;
-    gripper_rest_pose.position.x = -0.2;
+    gripper_rest_pose.position.x = -0.3;
     gripper_rest_pose.position.y = -0.3;
     gripper_rest_pose.position.z = 0.5;
 
     // gripper place; // pre-defined
     gripper_place_pose = gripper_rest_pose;
-    gripper_place_pose.position.x = 0.43;
+    gripper_place_pose.position.x = -0.43;
     gripper_place_pose.position.y = 0.08;
-    gripper_place_pose.position.z = 0.2;
+    gripper_place_pose.position.z = 0.3;
 
     sucker_rest_pose.orientation = suck_pose.orientation;
-    sucker_rest_pose.position.x = -0.2;
+    sucker_rest_pose.position.x = -0.3;
     sucker_rest_pose.position.y = -0.3;
     sucker_rest_pose.position.z = 0.5;
 
     sucker_place_pose = sucker_rest_pose;
-    sucker_place_pose.position.x = 0.43;
+    sucker_place_pose.position.x = -0.43;
     sucker_place_pose.position.y = 0.08;
-    sucker_place_pose.position.z = 0.20;
+    sucker_place_pose.position.z = 0.30;
 }
 
 // function declaration
@@ -391,9 +391,9 @@ void moveToTarget(const std::string& target_name);
 void moveToTarget(const geometry_msgs::PoseStamped& target);
 void moveLineTarget(const geometry_msgs::Pose& start, const geometry_msgs::Pose& goal);
 void error_deal(int error_nu);
-int confirmToAct(
-    const geometry_msgs::Pose& start, const geometry_msgs::Pose& goal, const string& str = "NULL");
-int confirmToAct(const geometry_msgs::Pose& goal, const string& str = "NULL");
+void confirmToAct(
+    const geometry_msgs::Pose& start, const geometry_msgs::Pose& goal, const string& str);
+void confirmToAct(const geometry_msgs::Pose& goal, const string& str);
 void handleCollisionObj(build_workScene& buildWorkScene);
 void moveLineTarget(const geometry_msgs::Pose& start, const geometry_msgs::Pose& goal);
 ERROR_NO hand_MsgConform_ActFinishedWait(id_data_msgs::ID_Data* notice_data_test,
@@ -551,7 +551,7 @@ int main(int argc, char** argv)
                 notice_test.notice_pub_sub_pulisher(notice_data);
                 ROS_WARN("notice hand to close (1 1)");
                 ERROR_NO err = hand_MsgConform_ActFinishedWait(
-                    notice_data, hand_msg_rec_flag, hand_act_finished_flag, notice_test);
+                    &notice_data, &hand_msg_rec_flag, &hand_act_finished_flag, &notice_test);
                 error_deal(err);
 
                 // 4. move to stand-by pose
@@ -562,7 +562,7 @@ int main(int argc, char** argv)
                     start.orientation = pregrasp_pose.orientation;
                 }
 
-                goal = pregrasp_pose;
+                goal = grasp_pose;
                 goal.position.z += 0.06;
                 pose_name = "PREGRASP (UP)";
                 confirmToAct(start, goal, pose_name);
@@ -644,7 +644,7 @@ int main(int argc, char** argv)
 
                 // wait finish
                 ERROR_NO err = hand_MsgConform_ActFinishedWait(
-                    notice_data, hand_msg_rec_flag, hand_act_finished_flag, notice_test);
+                    &notice_data, &hand_msg_rec_flag, &hand_act_finished_flag, &notice_test);
                 error_deal(err);
 
                 // 4. move to stand-by pose
@@ -671,7 +671,7 @@ int main(int argc, char** argv)
                 confirmToAct(start, goal, pose_name);
                 moveLineTarget(start, goal); // back
                 pose_name = "SUCK REST POSE";
-                confirmToAct(presuck_pose, sucker_rest_pose);
+                confirmToAct(presuck_pose, sucker_rest_pose, pose_name);
                 moveToTarget(sucker_rest_pose);
             }
 
@@ -733,7 +733,7 @@ int main(int argc, char** argv)
 
             // publish and wait for hand task finish signal
             ERROR_NO err = hand_MsgConform_ActFinishedWait(
-                notice_data, hand_msg_rec_flag, hand_act_finished_flag, notice_test);
+                &notice_data, &hand_msg_rec_flag, &hand_act_finished_flag, &notice_test);
             error_deal(err);
 
             // back to rest pose
@@ -793,11 +793,11 @@ ERROR_NO hand_MsgConform_ActFinishedWait(id_data_msgs::ID_Data* notice_data_test
         }
 
         wait_count++;
-        if (wait_count % 100 == 0) // send msg again after waiting 1s
+        if (wait_count % 20 == 0) // send msg again after waiting 1s
         {
             ROS_ERROR("Hand didn't receive msg, retrying...");
+            notice_test->notice_pub_sub_pulisher(notice_data);
         }
-        notice_test->notice_pub_sub_pulisher(notice_data);
 
         if (wait_count >= 10000) {
             error_no = notice_data.id;
@@ -813,9 +813,10 @@ ERROR_NO hand_MsgConform_ActFinishedWait(id_data_msgs::ID_Data* notice_data_test
             break;
         }
         wait_count++;
-        if (wait_count % 100 == 0) // send msg again after waiting 1s
+        if (wait_count % 50 == 0) // send msg again after waiting 1s
         {
-            ROS_ERROR("Waiting for hand to grasp/suck...");
+            if (arm_start_fetch_flag) ROS_INFO("Waiting for hand to grasp/suck...");
+            if (arm_release_obj_flag) ROS_INFO("Waiting for hand to open/release...");
         }
         notice_test->notice_sub_spinner(1);
         loop_rate.sleep();
@@ -970,7 +971,7 @@ void moveLineTarget(const geometry_msgs::Pose& start, const geometry_msgs::Pose&
     group.execute(cartesian_plan);
 }
 
-int confirmToAct(
+void confirmToAct(
     const geometry_msgs::Pose& start, const geometry_msgs::Pose& goal, const string& str = "NULL")
 {
     cout << "\n"
@@ -983,11 +984,11 @@ int confirmToAct(
     if ("n" == pause_) {
         ROS_INFO_STREAM("Valid plan, begin to execute");
     } else {
-        return 0;
+        return;
     }
 }
 
-int confirmToAct(const geometry_msgs::Pose& goal, const string& str = "NULL")
+void confirmToAct(const geometry_msgs::Pose& goal, const string& str = "NULL")
 {
     cout << "\n"
          << "=================MOVE TO " + str + "=================="
@@ -999,7 +1000,7 @@ int confirmToAct(const geometry_msgs::Pose& goal, const string& str = "NULL")
     if ("n" == pause_) {
         ROS_INFO_STREAM("Valid plan, begin to execute");
     } else {
-        return 0;
+        return;
     }
 }
 

@@ -34,23 +34,25 @@
 #include <pick_place.h>
 
 using namespace std;
-#define PREGRASP_OFFSET 0.20;
-#define DEBUG true;
+#define PREGRASP_OFFSET 0.20
+#define DEBUG true
 typedef int ERROR_NO;
 // hand flags
 bool hand_rec_msg_flag = false;
-bool hand_act_finish_flag = false;
+bool hand_act_finished_flag = false;
 bool arm_rec_msg_flag = false;
 
+int error_no = 0;
 string robot_name = "j2n6s300";
 geometry_msgs::Pose goal_pose;
+darknet_ros_msgs::TargetPoint canPoint;
 
 void kinectCallback(const darknet_ros_msgs::TargetPoints::ConstPtr& msg)
 {
     if (arm_rec_msg_flag == false) {
         for (int i = 0; msg->target_points.size(); i++) {
             if (msg->target_points[i].Class == "can") {
-                darknet_ros_msgs::TargetPoint canPoint = msg->target_points[i];
+                canPoint = msg->target_points[i];
                 break;
             }
         }
@@ -122,6 +124,16 @@ void notice_pub_sub::notice_msgCallback(const id_data_msgs::ID_Data::ConstPtr& n
     for (char i = 0; i < 8; i++) notice_message.data[i] = notice_msg->data[i];
 
     notice_pub_sub::notice_display(notice_message, true);
+
+    if (notice_message.id == 1 && notice_message.data[0] == 14) // hand rec
+    {
+        hand_rec_msg_flag = true;
+    }
+
+    if (notice_message.id == 1 && notice_message.data[0] == 2) // hand task over
+    {
+        hand_act_finished_flag = true;
+    }
 }
 
 void notice_pub_sub::notice_sub_spinner(char set)
@@ -135,6 +147,21 @@ void notice_pub_sub::notice_data_clear(id_data_msgs::ID_Data* test)
     test->id = 0;
     for (int i = 0; i < 8; i++) test->data[i] = 0;
 }
+
+/****************************function declaraton**********************/
+void notice_data_clear(id_data_msgs::ID_Data* test);
+
+void moveToTarget(const geometry_msgs::Pose& target);
+void moveToTarget(const std::string& target_name);
+void moveToTarget(const geometry_msgs::PoseStamped& target);
+void moveLineTarget(const geometry_msgs::Pose& start, const geometry_msgs::Pose& goal);
+void confirmToAct(
+    const geometry_msgs::Pose& start, const geometry_msgs::Pose& goal, const string& str);
+void confirmToAct(const geometry_msgs::Pose& goal, const string& str);
+void handleCollisionObj(build_workScene& buildWorkScene);
+ERROR_NO hand_MsgConform_ActFinishedWait(id_data_msgs::ID_Data* notice_data_test,
+    bool* msg_rec_flag, bool* finished_flag, notice_pub_sub* notice_test);
+void error_deal(int error_no);
 
 int main(int argc, char** argv)
 {
@@ -191,9 +218,9 @@ int main(int argc, char** argv)
     geometry_msgs::Pose pregrasp_pose = goal_pose;
     pregrasp_pose.position.y += PREGRASP_OFFSET;
     geometry_msgs::Pose gripper_rest_pose = pregrasp_pose;
-    gripper_rest_pose.position.x = 0.2;
+    gripper_rest_pose.position.x = -0.3;
     gripper_rest_pose.position.y = -0.3;
-    gripper_rest_pose.position.z = 0.4;
+    gripper_rest_pose.position.z = 0.5;
 
     // 1. pregrasp
     string pose_name = "PREGRASP POSE";
@@ -208,13 +235,14 @@ int main(int argc, char** argv)
         start = pick_place.get_ee_pose(); // real pose from driver info.
         start.orientation = pregrasp_pose.orientation;
     }
-    geometry_msgs::Pose goal = grasp_pose;
+    geometry_msgs::Pose goal = goal_pose;
     pose_name = "TARGET AND GRASP";
     confirmToAct(start, goal, pose_name);
     moveLineTarget(start, goal);
 
     // 3. GRASP TEST HK
     ROS_INFO("Begin grasp demo, press n to next:");
+    string pause_;
     cin >> pause_;
 
     if ("n" == pause_) {
@@ -229,19 +257,19 @@ int main(int argc, char** argv)
     notice_data_pub.data[0] = 3;
     // notice_test.notice_pub_sub_pulisher(notice_data_pub);
     ERROR_NO err = hand_MsgConform_ActFinishedWait(
-        notice_data, hand_msg_rec_flag, hand_act_finished_flag, notice_test);
+        &notice_data_pub, &hand_rec_msg_flag, &hand_act_finished_flag, &notice_test);
     error_deal(err);
     ros::Duration(5).sleep();
 
     // 4. move to rest pose
     if (DEBUG) {
-        start = grasp_pose;
+        start = goal_pose;
     } else {
         start = pick_place.get_ee_pose();
         start.orientation = pregrasp_pose.orientation;
     }
 
-    goal = pregrasp_pose;
+    goal = goal_pose;
     goal.position.z += 0.06;
     pose_name = "PREGRASP (UP)";
     confirmToAct(start, goal, pose_name);
@@ -296,36 +324,36 @@ void moveLineTarget(const geometry_msgs::Pose& start, const geometry_msgs::Pose&
     group.execute(cartesian_plan);
 }
 
-int confirmToAct(
+void confirmToAct(
     const geometry_msgs::Pose& start, const geometry_msgs::Pose& goal, const string& str = "NULL")
 {
     cout << "\n"
          << "=================MOVE TO " + str + "=================="
          << "\n";
     ROS_INFO_STREAM("Move from: " << start << "to " << goal);
-    ROS_INFO_STREAM("Confirm info and press n to execute plan");
+    ROS_INFO_STREAM("Confirm info. and press n to execute plan");
     string pause_;
     cin >> pause_;
     if ("n" == pause_) {
         ROS_INFO_STREAM("Valid plan, begin to execute");
     } else {
-        return 0;
+        return;
     }
 }
 
-int confirmToAct(const geometry_msgs::Pose& goal, const string& str = "NULL")
+void confirmToAct(const geometry_msgs::Pose& goal, const string& str = "NULL")
 {
     cout << "\n"
          << "=================MOVE TO " + str + "=================="
          << "\n";
-    ROS_INFO_STREAM("Move to target" << goal);
+    ROS_INFO_STREAM("Move to target " << goal);
     ROS_INFO_STREAM("Confirm info and press n to execute plan");
     string pause_;
     cin >> pause_;
     if ("n" == pause_) {
         ROS_INFO_STREAM("Valid plan, begin to execute");
     } else {
-        return 0;
+        return;
     }
 }
 
@@ -419,11 +447,11 @@ ERROR_NO hand_MsgConform_ActFinishedWait(id_data_msgs::ID_Data* notice_data_test
         }
 
         wait_count++;
-        if (wait_count % 100 == 0) // send msg again after waiting 1s
+        if (wait_count % 50 == 0) // send msg again after waiting 1s
         {
             ROS_ERROR("Hand didn't receive msg, retrying...");
+            notice_test->notice_pub_sub_pulisher(notice_data);
         }
-        notice_test->notice_pub_sub_pulisher(notice_data);
 
         if (wait_count >= 10000) {
             error_no = notice_data.id;
@@ -496,41 +524,39 @@ geometry_msgs::Pose getCurrentState()
 {
     geometry_msgs::Pose current_pose;
     tf::TransformListener listener;
-    while (ros::ok()) {
-        // try {
-        //     listener.transformPoint(robot_name + "_link_base", ee_pose, current_pose);
+    // try {
+    //     listener.transformPoint(robot_name + "_link_base", ee_pose, current_pose);
 
-        //     ROS_INFO("current pose: (%.2f, %.2f. %.2f) -----> base_link: (%.3f, %.3f,
-        //              "
-        //              "%.3f) at time %.2f",
-        //         ee_pose.point.x, ee_pose.point.y, ee_pose.point.z, current_pose.point.x,
-        //         current_pose.point.y, current_pose.point.z, current_pose.header.stamp.toSec());
-        // } catch (tf::TransformException& ex) {
-        //     ROS_ERROR("Received an exception trying to transform a point from "
-        //               "\"ee_frame\" to \"base_link\": %s",
-        //         ex.what());
-        // }
+    //     ROS_INFO("current pose: (%.2f, %.2f. %.2f) -----> base_link: (%.3f, %.3f,
+    //              "
+    //              "%.3f) at time %.2f",
+    //         ee_pose.point.x, ee_pose.point.y, ee_pose.point.z, current_pose.point.x,
+    //         current_pose.point.y, current_pose.point.z, current_pose.header.stamp.toSec());
+    // } catch (tf::TransformException& ex) {
+    //     ROS_ERROR("Received an exception trying to transform a point from "
+    //               "\"ee_frame\" to \"base_link\": %s",
+    //         ex.what());
+    // }
 
-        tf::StampedTransform transform;
-        try {
-            listener.lookupTransform("/root", "/j2n6s300_link_6", ros::Time(0), transform);
-        } catch (tf::TransformException ex) {
-            ROS_ERROR("%s", ex.what());
-            ros::Duration(1.0).sleep();
-        }
-
-        current_pose.position.x = transform.getOrigin().x();
-        current_pose.position.y = transform.getOrigin().y();
-        current_pose.position.z = transform.getOrigin().z();
-
-        tf::Quaternion q = transform.getRotation();
-        current_pose.orientation.x = q.x();
-        current_pose.orientation.y = q.y();
-        current_pose.orientation.z = q.z();
-        current_pose.orientation.w = q.w();
-
-        // end effector point
-        // pick_place.get_current_pose();
-        return current_pose;
+    tf::StampedTransform transform;
+    try {
+        listener.lookupTransform("/root", "/j2n6s300_link_6", ros::Time(0), transform);
+    } catch (tf::TransformException ex) {
+        ROS_ERROR("%s", ex.what());
+        ros::Duration(1.0).sleep();
     }
+
+    current_pose.position.x = transform.getOrigin().x();
+    current_pose.position.y = transform.getOrigin().y();
+    current_pose.position.z = transform.getOrigin().z();
+
+    tf::Quaternion q = transform.getRotation();
+    current_pose.orientation.x = q.x();
+    current_pose.orientation.y = q.y();
+    current_pose.orientation.z = q.z();
+    current_pose.orientation.w = q.w();
+
+    // end effector point
+    // pick_place.get_current_pose();
+    return current_pose;
 }
