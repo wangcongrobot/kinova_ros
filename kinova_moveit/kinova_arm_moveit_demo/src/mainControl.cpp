@@ -387,9 +387,9 @@ void poseInit() {
 
   // gripper place; // pre-defined
   gripper_place_pose = gripper_rest_pose;
-  gripper_place_pose.position.x = 0.1;
-  gripper_place_pose.position.y = -0.4;
-  gripper_place_pose.position.z = 0.6;
+  gripper_place_pose.position.x = 0.43;
+  gripper_place_pose.position.y = 0.08;
+  gripper_place_pose.position.z = 0.2;
 
   sucker_rest_pose.orientation = suck_pose.orientation;
   sucker_rest_pose.position.x = -0.2;
@@ -397,9 +397,9 @@ void poseInit() {
   sucker_rest_pose.position.z = 0.5;
 
   sucker_place_pose = sucker_rest_pose;
-  sucker_place_pose.position.x = 0.1;
-  sucker_place_pose.position.y = -0.4;
-  sucker_place_pose.position.z = 0.6;
+  sucker_place_pose.position.x = 0.43;
+  sucker_place_pose.position.y = 0.08;
+  sucker_place_pose.position.z = 0.20;
 
   //   gripper_rest_pose;  // pre-defined, pose after object is grasped
 }
