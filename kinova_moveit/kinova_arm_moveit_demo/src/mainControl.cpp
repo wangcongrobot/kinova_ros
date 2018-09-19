@@ -55,7 +55,7 @@ challenge.
 #define ORIENTATION_TOLERANCE 0.1
 #define MAX_PARALLEL_ATTEMPTS 10
 #define DEBUG true
-typedef int ERROR_NO;
+typedef int ErrorCode;
 
 using namespace std;
 // globals
@@ -396,7 +396,7 @@ void confirmToAct(
 void confirmToAct(const geometry_msgs::Pose& goal, const string& str);
 void handleCollisionObj(build_workScene& buildWorkScene);
 void moveLineTarget(const geometry_msgs::Pose& start, const geometry_msgs::Pose& goal);
-ERROR_NO hand_MsgConform_ActFinishedWait(id_data_msgs::ID_Data* notice_data_test,
+ErrorCode hand_MsgConform_ActFinishedWait(id_data_msgs::ID_Data* notice_data_test,
     bool* msg_rec_flag, bool* finished_flag, notice_pub_sub* notice_test);
 
 int main(int argc, char** argv)
@@ -550,7 +550,7 @@ int main(int argc, char** argv)
                 notice_data.data[0] = 3;
                 notice_test.notice_pub_sub_pulisher(notice_data);
                 ROS_WARN("notice hand to close (1 1)");
-                ERROR_NO err = hand_MsgConform_ActFinishedWait(
+                ErrorCode err = hand_MsgConform_ActFinishedWait(
                     &notice_data, &hand_msg_rec_flag, &hand_act_finished_flag, &notice_test);
                 error_deal(err);
 
@@ -643,7 +643,7 @@ int main(int argc, char** argv)
                 ROS_INFO("notice sucker to suck (1 8)");
 
                 // wait finish
-                ERROR_NO err = hand_MsgConform_ActFinishedWait(
+                ErrorCode err = hand_MsgConform_ActFinishedWait(
                     &notice_data, &hand_msg_rec_flag, &hand_act_finished_flag, &notice_test);
                 error_deal(err);
 
@@ -732,7 +732,7 @@ int main(int argc, char** argv)
             }
 
             // publish and wait for hand task finish signal
-            ERROR_NO err = hand_MsgConform_ActFinishedWait(
+            ErrorCode err = hand_MsgConform_ActFinishedWait(
                 &notice_data, &hand_msg_rec_flag, &hand_act_finished_flag, &notice_test);
             error_deal(err);
 
@@ -771,7 +771,7 @@ void notice_data_clear(id_data_msgs::ID_Data* test)
     for (int i = 0; i < 8; i++) test->data[i] = 0;
 }
 
-ERROR_NO hand_MsgConform_ActFinishedWait(id_data_msgs::ID_Data* notice_data_test,
+ErrorCode hand_MsgConform_ActFinishedWait(id_data_msgs::ID_Data* notice_data_test,
     bool* msg_rec_flag, bool* finished_flag, notice_pub_sub* notice_test)
 {
     id_data_msgs::ID_Data notice_data;

@@ -162,8 +162,6 @@ void handleCollisionObj(build_workScene& buildWorkScene);
 ErrorCode hand_MsgConform_ActFinishedWait(id_data_msgs::ID_Data* notice_data_test,
     bool* msg_rec_flag, bool* finished_flag, notice_pub_sub* notice_test);
 void error_deal(int error_no);
-int evaluateMoveitPlan(moveit::planning_interface::MoveGroup::Plan& plan); // return plan steps
-
 
 int main(int argc, char** argv)
 {
@@ -216,39 +214,27 @@ int main(int argc, char** argv)
         buildWorkScene.collision_objects); // add collision objects into world
     ROS_INFO("Collision setup finished");
 
-    // predifined poses
+    // select group of joints
     geometry_msgs::Pose pregrasp_pose = goal_pose;
     pregrasp_pose.position.y += PREGRASP_OFFSET;
     geometry_msgs::Pose gripper_rest_pose = pregrasp_pose;
     gripper_rest_pose.position.x = -0.3;
     gripper_rest_pose.position.y = -0.3;
     gripper_rest_pose.position.z = 0.5;
-    geometry_msgs::Pose current_pose;
-    // geometry_msgs::PoseStamped current_poseStamp;
-
-    // test getCurrentPose() func. --Alvin
-    moveit::planning_interface::MoveGroup group("arm");
-    // current_poseStamp = group.getCurrentPose();
-    // current_pose = current_poseStamp.pose;
-    current_pose = group.getCurrentPose().pose;
 
     // 1. pregrasp
     string pose_name = "PREGRASP POSE";
-    confirmToAct(current_pose, pregrasp_pose, pose_name);
+    confirmToAct(pregrasp_pose, pose_name);
     moveToTarget(pregrasp_pose); // plan to pre-grasp pose
 
     // 2. move forward
     geometry_msgs::Pose start;
-    // if (DEBUG) {
-    //     start = pregrasp_pose; // virtual pose
-    // } else {
-    //     start = pick_place.get_ee_pose(); // real pose from driver info.
-    //     start.orientation = pregrasp_pose.orientation;
-    // }
-    current_poseStamp = group.getCurrentPose(); // test func.
-    start = current_poseStamp.pose;
-    start.orientation = pregrasp_pose.orientation;
-
+    if (DEBUG) {
+        start = pregrasp_pose; // virtual pose
+    } else {
+        start = pick_place.get_ee_pose(); // real pose from driver info.
+        start.orientation = pregrasp_pose.orientation;
+    }
     geometry_msgs::Pose goal = goal_pose;
     pose_name = "TARGET AND GRASP";
     confirmToAct(start, goal, pose_name);
@@ -413,14 +399,12 @@ void moveToTarget(const geometry_msgs::Pose& target)
     group.setPlanningTime(3.0);
 
     int loops = 10; // planing tries
-    bool success = false;
-    int plan_steps = 0;
+    bool success = group.plan(my_plan);
+
     for (int i = 0; i < loops; i++) {
         success = group.plan(my_plan);
         if (success) {
-            plan_steps = evaluateMoveitPlan(my_plan);
-            ROS_INFO_STREAM("Try " << i << ": plan found in " << my_plan.planning_time_
-                                   << " seconds with" << plan_steps << " steps");
+            ROS_INFO_STREAM("Plan found in " << my_plan.planning_time_ << " seconds");
             break;
             // TODO: choose plans according to measures
         } else {
@@ -433,13 +417,6 @@ void moveToTarget(const geometry_msgs::Pose& target)
     ros::Time start = ros::Time::now();
     group.execute(my_plan);
     ROS_INFO_STREAM("Motion duration: " << (ros::Time::now() - start).toSec());
-}
-
-int evaluateMoveitPlan(moveit::planning_interface::MoveGroup::Plan& plan)
-{
-    moveit_msgs::RobotTrajectory trajectory = plan.trajectory_;
-    trajectory_msgs::JointTrajectoryPoint points = trajectory.joint_trajectory.points;
-    return points.size();
 }
 
 void notice_data_clear(id_data_msgs::ID_Data* test)
