@@ -96,7 +96,6 @@ notice_pub_sub::notice_pub_sub()
         "/notice", 50, notice_pub_sub_msgCallbackFun, ros::VoidPtr(), &notice_callbackqueue);
     notice_subscriber = notice_handle.subscribe(notice_ops);
     notice_spinner = new ros::AsyncSpinner(1, &notice_callbackqueue);
-
     notice_publisher = notice_handle.advertise<id_data_msgs::ID_Data>("/notice", 50);
 }
 
@@ -483,13 +482,13 @@ ErrorCode hand_MsgConform_ActFinishedWait(id_data_msgs::ID_Data* notice_data_tes
         }
 
         wait_count++;
-        if (wait_count % 50 == 0) // send msg again after waiting 1s
+        if (wait_count % 10 == 0) // send msg again after waiting 1s
         {
             ROS_ERROR("Hand didn't receive msg, retrying...");
             notice_test->notice_pub_sub_pulisher(notice_data);
         }
 
-        if (wait_count >= 10000) {
+        if (wait_count >= 1000) {
             error_no = notice_data.id;
             goto next;
         }
@@ -503,7 +502,7 @@ ErrorCode hand_MsgConform_ActFinishedWait(id_data_msgs::ID_Data* notice_data_tes
             break;
         }
         wait_count++;
-        if (wait_count % 100 == 0) // send msg again after waiting 1s
+        if (wait_count % 20 == 0) // send msg again after waiting 1s
         {
             ROS_ERROR("Waiting for hand to grasp/suck...");
         }

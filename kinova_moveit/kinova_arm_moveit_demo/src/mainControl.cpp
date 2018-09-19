@@ -108,16 +108,16 @@ bool arm_msg_rec_flag = false;      // data[0]=14
 bool arm_act_finished_flag = false; // data[0]=15
 bool use_gripper_flag = true;       // alvin, grasp or suck depend on target
 
-geometry_msgs::Pose home_pose;
-geometry_msgs::Pose scan_pose1;
-geometry_msgs::Pose scan_pose2;
+// geometry_msgs::Pose home_pose;
+// geometry_msgs::Pose scan_pose1;
+// geometry_msgs::Pose scan_pose2;
 // geometry_msgs::Pose grasp_pose;
 // geometry_msgs::Pose place_pose;
-geometry_msgs::Pose pregrasp_low;
-geometry_msgs::Pose pregrasp_high;
-geometry_msgs::Pose pregrasp_mid;
-geometry_msgs::Pose pregrasp_high_test;
-geometry_msgs::Pose pregrasp_mid_test;
+// geometry_msgs::Pose pregrasp_low;
+// geometry_msgs::Pose pregrasp_high;
+// geometry_msgs::Pose pregrasp_mid;
+// geometry_msgs::Pose pregrasp_high_test;
+// geometry_msgs::Pose pregrasp_mid_test;
 
 // Pose used by Alvin
 geometry_msgs::Pose grasp_pose; // Plan target from kinect --global variable
@@ -131,6 +131,7 @@ geometry_msgs::Pose sucker_place_pose; // pre-defined
 geometry_msgs::Pose sucker_rest_pose;  // pre-defined, pose after object is grasped
 
 geometry_msgs::Pose current_pose; // used to indicate arm state
+sring hand_current_mode = "grasp";
 
 /***************************NOTICE CLASS****************************/
 class notice_pub_sub {
@@ -359,12 +360,12 @@ void poseInit()
     // suck_pose.orientation.w = q.w();
 
     suck_pose.orientation
-        = tf::createQuaternionMsgFromRollPitchYaw(1.57, -1.2, 0.0); // grasp orientation
+        = tf::createQuaternionMsgFromRollPitchYaw(1.57, -1.78, 0.0); // grasp orientation
     // rest pose
     gripper_rest_pose.orientation = grasp_pose.orientation;
-    gripper_rest_pose.position.x = -0.3;
+    gripper_rest_pose.position.x = -0.2;
     gripper_rest_pose.position.y = -0.3;
-    gripper_rest_pose.position.z = 0.5;
+    gripper_rest_pose.position.z = 0.4;
 
     // gripper place; // pre-defined
     gripper_place_pose = gripper_rest_pose;
@@ -373,9 +374,9 @@ void poseInit()
     gripper_place_pose.position.z = 0.3;
 
     sucker_rest_pose.orientation = suck_pose.orientation;
-    sucker_rest_pose.position.x = -0.3;
+    sucker_rest_pose.position.x = -0.2;
     sucker_rest_pose.position.y = -0.3;
-    sucker_rest_pose.position.z = 0.5;
+    sucker_rest_pose.position.z = 0.4;
 
     sucker_place_pose = sucker_rest_pose;
     sucker_place_pose.position.x = -0.43;
@@ -397,7 +398,7 @@ void confirmToAct(const geometry_msgs::Pose& goal, const string& str);
 void handleCollisionObj(build_workScene& buildWorkScene);
 void moveLineTarget(const geometry_msgs::Pose& start, const geometry_msgs::Pose& goal);
 ErrorCode hand_MsgConform_ActFinishedWait(id_data_msgs::ID_Data* notice_data_test,
-    bool* msg_rec_flag, bool* finished_flag, notice_pub_sub* notice_test);
+    bool* msg_rec_flag, bool* finished_flag, notice_pub_sub* notice_test, string task);
 
 int main(int argc, char** argv)
 {
@@ -527,12 +528,32 @@ int main(int argc, char** argv)
                 // ROS_INFO_STREAM("pregrasp pose: " << pregrasp_pose);
 
                 // 1. pregrasp
+                geometry_msgs::Pose start;
+                if (DEBUG) {
+                    start = group.getCurrentPose().pose; // virtual pose
+                } else {
+                    start = pick_place.get_ee_pose(); // real pose from driver info.
+                    start.orientation = pregrasp_pose.orientation;
+                }
                 pose_name = "PREGRASP POSE";
-                confirmToAct(pregrasp_pose, pose_name);
+                confirmToAct(start, pregrasp_pose, pose_name);
                 moveToTarget(pregrasp_pose); // plan to pre-grasp pose
 
+                // switch to grasp mode
+                if (hand_current_mode != "grasp") {
+                    notice_data.id = 1;
+                    notice_data.data[0] = 0;
+                    notice_test.notice_pub_sub_pulisher(notice_data);
+                    ROS_INFO("switch to grasp mode (1 4)");
+
+                    // wait switch finish
+                    ErrorCode err = hand_MsgConform_ActFinishedWait(&notice_data,
+                        &hand_msg_rec_flag, &hand_act_finished_flag, &notice_test, "SWITCH");
+                    error_deal(err);
+                    hand_current_mode = "grasp";
+                }
+
                 // 2. move forward
-                geometry_msgs::Pose start;
                 if (DEBUG) {
                     start = pregrasp_pose; // virtual pose
                 } else {
@@ -549,9 +570,9 @@ int main(int argc, char** argv)
                 notice_data.id = 1;
                 notice_data.data[0] = 3;
                 notice_test.notice_pub_sub_pulisher(notice_data);
-                ROS_WARN("notice hand to close (1 1)");
-                ErrorCode err = hand_MsgConform_ActFinishedWait(
-                    &notice_data, &hand_msg_rec_flag, &hand_act_finished_flag, &notice_test);
+                ROS_WARN("notice hand to close (1 3)");
+                ErrorCode err = hand_MsgConform_ActFinishedWait(&notice_data, &hand_msg_rec_flag,
+                    &hand_act_finished_flag, &notice_test, "FETCH");
                 error_deal(err);
 
                 // 4. move to stand-by pose
@@ -564,13 +585,13 @@ int main(int argc, char** argv)
 
                 goal = grasp_pose;
                 goal.position.z += 0.06;
-                pose_name = "PREGRASP (UP)";
+                pose_name = "MOVE TO REST (UP)";
                 confirmToAct(start, goal, pose_name);
                 moveLineTarget(start, goal);
 
                 start = goal;
                 goal.position.y += PREGRASP_OFFSET;
-                pose_name = "PREGRASP (BACK)";
+                pose_name = "MOVE OT REST (BACK)";
                 confirmToAct(start, goal, pose_name);
                 moveLineTarget(start, goal);
 
@@ -579,18 +600,36 @@ int main(int argc, char** argv)
                 moveToTarget(gripper_rest_pose);
 
             } else {
-                // suck mode
+                // suck mode, use_gripper_flag = false
                 presuck_pose = suck_pose;
                 presuck_pose.position.z += PREGRASP_OFFSET;
                 presuck_pose.position.y += PREGRASP_OFFSET;
 
                 // 1. presuck
+                geometry_msgs::Pose start;
+                if (DEBUG) {
+                    start = group.getCurrentPose().pose;
+                } else {
+                    start = pick_place.get_ee_pose(); // real pose from driver info.
+                }
                 pose_name = "PRESUCK POSE";
-                confirmToAct(presuck_pose, pose_name);
+                confirmToAct(start, presuck_pose, pose_name);
                 moveToTarget(presuck_pose); // plan to pre-grasp pose
 
-                // 2. move forward and downside
-                geometry_msgs::Pose start;
+                // 2.swich to suck mode
+                if (hand_current_mode != "suck") {
+                    notice_data.id = 1;
+                    notice_data.data[0] = 4;
+                    notice_test.notice_pub_sub_pulisher(notice_data);
+                    ROS_INFO("switch to suck mode (1 4)");
+                    // wait switch finish
+                    ErrorCode err = hand_MsgConform_ActFinishedWait(&notice_data,
+                        &hand_msg_rec_flag, &hand_act_finished_flag, &notice_test, "SWITCH");
+                    error_deal(err);
+                    hand_current_mode = "suck";
+                }
+
+                // 3. move forward and downside
                 if (DEBUG) {
                     start = presuck_pose;
                 } else {
@@ -614,42 +653,21 @@ int main(int argc, char** argv)
                 confirmToAct(start, goal, pose_name);
                 moveLineTarget(start, goal); // down
 
-                // 3.swich to suck mode
-                notice_data.id = 1;
-                notice_data.data[0] = 4;
-                notice_test.notice_pub_sub_pulisher(notice_data);
-                ROS_INFO("switch to suck mode (1 4)");
-
-                // wait switch finish
-                wait_count = 0;
-                while (ros::ok()) {
-                    wait_count++;
-                    if (wait_count % 100 == 0) {
-                        ROS_INFO("waiting switch to suck");
-                    }
-                    if (hand_act_finished_flag) // 1 2
-                    {
-                        hand_act_finished_flag = false;
-                        break;
-                    }
-                    notice_test.notice_sub_spinner(1);
-                    loop_rate.sleep();
-                }
-                // suck
+                // 4. begin suck
                 notice_data_clear(&notice_data);
                 notice_data.id = 1;
                 notice_data.data[0] = 8;
                 notice_test.notice_pub_sub_pulisher(notice_data);
                 ROS_INFO("notice sucker to suck (1 8)");
 
-                // wait finish
-                ErrorCode err = hand_MsgConform_ActFinishedWait(
-                    &notice_data, &hand_msg_rec_flag, &hand_act_finished_flag, &notice_test);
+                // wait suck finish
+                ErrorCode err = hand_MsgConform_ActFinishedWait(&notice_data, &hand_msg_rec_flag,
+                    &hand_act_finished_flag, &notice_test, "FETCH");
                 error_deal(err);
 
-                // 4. move to stand-by pose
+                // 5. move to stand-by pose
                 if (DEBUG) {
-                    start = presuck_pose;
+                    start = suck_pose;
                 } else {
                     start = pick_place.get_ee_pose();
                     start.orientation = presuck_pose.orientation;
@@ -733,7 +751,7 @@ int main(int argc, char** argv)
 
             // publish and wait for hand task finish signal
             ErrorCode err = hand_MsgConform_ActFinishedWait(
-                &notice_data, &hand_msg_rec_flag, &hand_act_finished_flag, &notice_test);
+                &notice_data, &hand_msg_rec_flag, &hand_act_finished_flag, &notice_test, "RELEASE");
             error_deal(err);
 
             // back to rest pose
@@ -772,7 +790,7 @@ void notice_data_clear(id_data_msgs::ID_Data* test)
 }
 
 ErrorCode hand_MsgConform_ActFinishedWait(id_data_msgs::ID_Data* notice_data_test,
-    bool* msg_rec_flag, bool* finished_flag, notice_pub_sub* notice_test)
+    bool* msg_rec_flag, bool* finished_flag, notice_pub_sub* notice_test, string task)
 {
     id_data_msgs::ID_Data notice_data;
     int loop_hz = 10;
@@ -799,7 +817,7 @@ ErrorCode hand_MsgConform_ActFinishedWait(id_data_msgs::ID_Data* notice_data_tes
             notice_test->notice_pub_sub_pulisher(notice_data);
         }
 
-        if (wait_count >= 10000) {
+        if (wait_count >= 2000) {
             error_no = notice_data.id;
             goto next;
         }
@@ -813,15 +831,15 @@ ErrorCode hand_MsgConform_ActFinishedWait(id_data_msgs::ID_Data* notice_data_tes
             break;
         }
         wait_count++;
-        if (wait_count % 50 == 0) // send msg again after waiting 1s
+        if (wait_count % 20 == 0) // send msg again after waiting 1s
         {
-            if (arm_start_fetch_flag) ROS_INFO("Waiting for hand to grasp/suck...");
-            if (arm_release_obj_flag) ROS_INFO("Waiting for hand to open/release...");
+            if (task == "FETCH") ROS_INFO("Waiting for hand to grasp/suck...");
+            if (tssk == "RELEASE") ROS_INFO("Waiting for hand to open/release...");
+            if (tssk == "SWITCH") ROS_INFO("Waiting for hand to switch mode...");
         }
         notice_test->notice_sub_spinner(1);
         loop_rate.sleep();
     }
-
 next:
     return error_no;
 }
@@ -869,7 +887,7 @@ void moveToTarget(const geometry_msgs::Pose& target)
     group.setGoalPositionTolerance(0.01);    // 3cm
     group.setGoalOrientationTolerance(0.01); // 5.729576129 * 2 deg
     group.setMaxVelocityScalingFactor(0.5);
-    // group.setNumPlanningAttempts(1);
+    group.setNumPlanningAttempts(2);
     group.setStartStateToCurrentState();
     group.setPoseTarget(target);
 
@@ -877,27 +895,50 @@ void moveToTarget(const geometry_msgs::Pose& target)
                                         << group.getPlanningFrame() << " with obstacles");
 
     moveit::planning_interface::MoveGroup::Plan my_plan;
-    group.setPlanningTime(3.0);
+    group.setPlanningTime(2.0);
 
     int loops = 10; // planing tries
-    bool success = group.plan(my_plan);
+    bool success = false;
+    bool plan_valid = false;
+    int plan_steps = 0;
 
+    // replan until valid paln is returned
     for (int i = 0; i < loops; i++) {
         success = group.plan(my_plan);
         if (success) {
-            ROS_INFO_STREAM("Plan found in " << my_plan.planning_time_ << " seconds");
-            break;
+            plan_steps = evaluateMoveitPlan(my_plan);
+            if (plan_steps < 25) {
+                ROS_INFO_STREAM("Try " << i << ": plan found in " << my_plan.planning_time_
+                                       << " seconds with " << plan_steps << " steps");
+                plan_valid = true;
+                break;
+            }
             // TODO: choose plans according to measures
         } else {
             ROS_INFO("Plan failed at try: %d", i);
         }
     }
+    if (!plan_valid) ROS_INFO("No plan found after 10 tries");
 
-    if (!success) ROS_INFO("No plan found after 10 tries");
     // Execute the plan
-    ros::Time start = ros::Time::now();
-    group.execute(my_plan);
-    ROS_INFO_STREAM("Motion duration: " << (ros::Time::now() - start).toSec());
+    ROS_INFO("Print n to execute the plan");
+    string pause_;
+    cin >> pause_;
+    if (pause_ == "n") {
+        ros::Time start = ros::Time::now();
+        group.execute(my_plan);
+        ROS_INFO_STREAM("Motion duration: " << (ros::Time::now() - start).toSec());
+    } else {
+        return;
+    }
+}
+
+int evaluateMoveitPlan(moveit::planning_interface::MoveGroup::Plan& plan)
+{
+    moveit_msgs::RobotTrajectory trajectory = plan.trajectory_;
+    // std::vector<trajectory_msgs::JointTrajectoryPoint> points =
+    // trajectory.joint_trajectory.points;
+    return trajectory.joint_trajectory.points.size();
 }
 
 // Plan with pre-defined postures
@@ -944,7 +985,7 @@ void moveLineTarget(const geometry_msgs::Pose& start, const geometry_msgs::Pose&
 
     std::vector<geometry_msgs::Pose> waypoints;
     waypoints.push_back(way_pose); // first pose waypoint
-    int num_waypoint = 5;
+    int num_waypoint = 6;
     float delta_x = (goal.position.x - start.position.x) / (num_waypoint - 1);
     float delta_y = (goal.position.y - start.position.y) / (num_waypoint - 1);
     float delta_z = (goal.position.z - start.position.z) / (num_waypoint - 1);
@@ -978,11 +1019,12 @@ void confirmToAct(
          << "=================MOVE TO " + str + "=================="
          << "\n";
     ROS_INFO_STREAM("Move from: " << start << "to " << goal);
-    ROS_INFO_STREAM("Confirm info and press n to execute plan");
+    ROS_INFO_STREAM("Confirm start ---> goal info, press n to start plan");
+
     string pause_;
     cin >> pause_;
     if ("n" == pause_) {
-        ROS_INFO_STREAM("Valid plan, begin to execute");
+        ROS_INFO_STREAM("Corrent state, begin to plan");
     } else {
         return;
     }
@@ -994,11 +1036,11 @@ void confirmToAct(const geometry_msgs::Pose& goal, const string& str = "NULL")
          << "=================MOVE TO " + str + "=================="
          << "\n";
     ROS_INFO_STREAM("Move to target" << goal);
-    ROS_INFO_STREAM("Confirm info and press n to execute plan");
+    ROS_INFO_STREAM("Confirm start ---> goal info, press n to start plan");
     string pause_;
     cin >> pause_;
     if ("n" == pause_) {
-        ROS_INFO_STREAM("Valid plan, begin to execute");
+        ROS_INFO_STREAM("Correct state, begin to plan");
     } else {
         return;
     }
