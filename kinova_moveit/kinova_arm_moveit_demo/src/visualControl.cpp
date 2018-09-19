@@ -17,6 +17,9 @@
 
 #include <moveit_msgs/DisplayRobotState.h>
 #include <moveit_msgs/DisplayTrajectory.h>
+#include <moveit_msgs/RobotTrajectory.h>
+#include <trajectory_msgs/JointTrajectory.h>
+#include <trajectory_msgs/JointTrajectoryPoint.h>
 
 #include <moveit_msgs/AttachedCollisionObject.h>
 #include <moveit_msgs/CollisionObject.h>
@@ -35,7 +38,7 @@
 
 using namespace std;
 #define PREGRASP_OFFSET 0.20
-#define DEBUG true
+#define DEBUG false
 typedef int ErrorCode;
 // hand flags
 bool hand_rec_msg_flag = false;
@@ -164,7 +167,6 @@ ErrorCode hand_MsgConform_ActFinishedWait(id_data_msgs::ID_Data* notice_data_tes
 void error_deal(int error_no);
 int evaluateMoveitPlan(moveit::planning_interface::MoveGroup::Plan& plan); // return plan steps
 
-
 int main(int argc, char** argv)
 {
     ros::init(argc, argv, "visualControl");
@@ -220,34 +222,31 @@ int main(int argc, char** argv)
     geometry_msgs::Pose pregrasp_pose = goal_pose;
     pregrasp_pose.position.y += PREGRASP_OFFSET;
     geometry_msgs::Pose gripper_rest_pose = pregrasp_pose;
-    gripper_rest_pose.position.x = -0.3;
+    gripper_rest_pose.position.x = -0.2;
     gripper_rest_pose.position.y = -0.3;
-    gripper_rest_pose.position.z = 0.5;
-    geometry_msgs::Pose current_pose;
-    // geometry_msgs::PoseStamped current_poseStamp;
+    gripper_rest_pose.position.z = 0.4;
 
     // test getCurrentPose() func. --Alvin
     moveit::planning_interface::MoveGroup group("arm");
-    // current_poseStamp = group.getCurrentPose();
-    // current_pose = current_poseStamp.pose;
-    current_pose = group.getCurrentPose().pose;
 
     // 1. pregrasp
+    geometry_msgs::Pose start;
+    if (DEBUG) {
+        start = group.getCurrentPose().pose;
+    } else {
+        start = pick_place.get_ee_pose(); // real pose from driver info.
+    }
     string pose_name = "PREGRASP POSE";
-    confirmToAct(current_pose, pregrasp_pose, pose_name);
+    confirmToAct(start, pregrasp_pose, pose_name);
     moveToTarget(pregrasp_pose); // plan to pre-grasp pose
 
     // 2. move forward
-    geometry_msgs::Pose start;
-    // if (DEBUG) {
-    //     start = pregrasp_pose; // virtual pose
-    // } else {
-    //     start = pick_place.get_ee_pose(); // real pose from driver info.
-    //     start.orientation = pregrasp_pose.orientation;
-    // }
-    current_poseStamp = group.getCurrentPose(); // test func.
-    start = current_poseStamp.pose;
-    start.orientation = pregrasp_pose.orientation;
+    if (DEBUG) {
+        start = pregrasp_pose; // virtual pose
+    } else {
+        start = pick_place.get_ee_pose(); // real pose from driver info.
+        start.orientation = pregrasp_pose.orientation;
+    }
 
     geometry_msgs::Pose goal = goal_pose;
     pose_name = "TARGET AND GRASP";
@@ -345,11 +344,11 @@ void confirmToAct(
          << "=================MOVE TO " + str + "=================="
          << "\n";
     ROS_INFO_STREAM("Move from: " << start << "to " << goal);
-    ROS_INFO_STREAM("Confirm info. and press n to execute plan");
+    ROS_INFO_STREAM("Confirm start and end info and press n to start plan");
     string pause_;
     cin >> pause_;
     if ("n" == pause_) {
-        ROS_INFO_STREAM("Valid plan, begin to execute");
+        ROS_INFO_STREAM("Valid info, begin to plan ");
     } else {
         return;
     }
@@ -361,11 +360,11 @@ void confirmToAct(const geometry_msgs::Pose& goal, const string& str = "NULL")
          << "=================MOVE TO " + str + "=================="
          << "\n";
     ROS_INFO_STREAM("Move to target " << goal);
-    ROS_INFO_STREAM("Confirm info and press n to execute plan");
+    ROS_INFO_STREAM("Confirm start and end info and press n to start plan");
     string pause_;
     cin >> pause_;
     if ("n" == pause_) {
-        ROS_INFO_STREAM("Valid plan, begin to execute");
+        ROS_INFO_STREAM("Valid info, begin to plan");
     } else {
         return;
     }
@@ -414,32 +413,46 @@ void moveToTarget(const geometry_msgs::Pose& target)
 
     int loops = 10; // planing tries
     bool success = false;
+    bool plan_valid = false;
     int plan_steps = 0;
+
+    // replan until valid paln is returned
     for (int i = 0; i < loops; i++) {
         success = group.plan(my_plan);
         if (success) {
             plan_steps = evaluateMoveitPlan(my_plan);
-            ROS_INFO_STREAM("Try " << i << ": plan found in " << my_plan.planning_time_
-                                   << " seconds with" << plan_steps << " steps");
-            break;
+            if (plan_steps < 25) {
+                ROS_INFO_STREAM("Try " << i << ": plan found in " << my_plan.planning_time_
+                                       << " seconds with " << plan_steps << " steps");
+                plan_valid = true;
+                break;
+            }
             // TODO: choose plans according to measures
         } else {
             ROS_INFO("Plan failed at try: %d", i);
         }
     }
+    if (!plan_valid) ROS_INFO("No plan found after 10 tries");
 
-    if (!success) ROS_INFO("No plan found after 10 tries");
     // Execute the plan
-    ros::Time start = ros::Time::now();
-    group.execute(my_plan);
-    ROS_INFO_STREAM("Motion duration: " << (ros::Time::now() - start).toSec());
+    ROS_INFO("Print n to execute the plan");
+    string pause_;
+    cin >> pause_;
+    if (pause_ == "n") {
+        ros::Time start = ros::Time::now();
+        group.execute(my_plan);
+        ROS_INFO_STREAM("Motion duration: " << (ros::Time::now() - start).toSec());
+    } else {
+        return;
+    }
 }
 
 int evaluateMoveitPlan(moveit::planning_interface::MoveGroup::Plan& plan)
 {
     moveit_msgs::RobotTrajectory trajectory = plan.trajectory_;
-    trajectory_msgs::JointTrajectoryPoint points = trajectory.joint_trajectory.points;
-    return points.size();
+    // std::vector<trajectory_msgs::JointTrajectoryPoint> points =
+    // trajectory.joint_trajectory.points;
+    return trajectory.joint_trajectory.points.size();
 }
 
 void notice_data_clear(id_data_msgs::ID_Data* test)
