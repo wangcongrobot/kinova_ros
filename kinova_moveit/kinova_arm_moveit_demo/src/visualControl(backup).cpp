@@ -53,6 +53,7 @@ void kinectCallback(const darknet_ros_msgs::TargetPoints::ConstPtr& msg)
         for (int i = 0; msg->target_points.size(); i++) {
             if (msg->target_points[i].Class == "can") {
                 canPoint = msg->target_points[i];
+                ROS_INFO_STREAM("can position: " << canPoint);
                 break;
             }
         }
@@ -60,8 +61,10 @@ void kinectCallback(const darknet_ros_msgs::TargetPoints::ConstPtr& msg)
         goal_pose.position.y = canPoint.camera_y;
         goal_pose.position.z = canPoint.camera_z + 0.03;
         goal_pose.orientation = tf::createQuaternionMsgFromRollPitchYaw(1.57, -1.0, 0.0);
-        arm_rec_msg_flag = true;
-        ROS_INFO_STREAM("Get object pose from kinect");
+        if (goal_pose.position.x != 0 && goal_pose.position.y < -0.1) {
+            arm_rec_msg_flag = true;
+            ROS_INFO_STREAM("Get object pose from kinect");
+        }
     } else
         return;
 }

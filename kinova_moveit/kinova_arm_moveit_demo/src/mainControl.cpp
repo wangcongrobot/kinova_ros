@@ -51,10 +51,11 @@ challenge.
 // #include "wpi_jaco_msgs/EStop.h"
 
 #define PREGRASP_OFFSET 0.2
+#define PRESUCK_OFFSET_LOW 0.1
 #define POSITION_TOLERANCE 0.04
 #define ORIENTATION_TOLERANCE 0.1
 #define MAX_PARALLEL_ATTEMPTS 10
-#define DEBUG true
+#define DEBUG false
 typedef int ErrorCode;
 
 using namespace std;
@@ -131,7 +132,7 @@ geometry_msgs::Pose sucker_place_pose; // pre-defined
 geometry_msgs::Pose sucker_rest_pose;  // pre-defined, pose after object is grasped
 
 geometry_msgs::Pose current_pose; // used to indicate arm state
-sring hand_current_mode = "grasp";
+string hand_current_mode = "grasp";
 
 /***************************NOTICE CLASS****************************/
 class notice_pub_sub {
@@ -302,7 +303,7 @@ void notice_pub_sub::notice_msgCallback(const id_data_msgs::ID_Data::ConstPtr& n
             ROS_INFO("Valid object position from kinect");
             grasp_pose.position.x = x;
             grasp_pose.position.y = y;
-            grasp_pose.position.z = z + 0.03;
+            grasp_pose.position.z = z + 0.02;
             // kinect_target_valid = true;
             arm_start_fetch_flag = true;
             use_gripper_flag = true; // hard obj
@@ -318,8 +319,8 @@ void notice_pub_sub::notice_msgCallback(const id_data_msgs::ID_Data::ConstPtr& n
         if (fabs(x) < 0.5 && y < -0.3) {
             ROS_INFO("Valid object position from kinect");
             suck_pose.position.x = x;
-            suck_pose.position.y = y - 0.03; // correction
-            suck_pose.position.z = z + 0.1;  // correction
+            suck_pose.position.y = y - 0.02; // correction
+            suck_pose.position.z = z + 0.13; // correction
             // kinect_target_valid = true;
             arm_start_fetch_flag = true;
             use_gripper_flag = false;
@@ -353,14 +354,7 @@ void poseInit()
 {
     grasp_pose.orientation
         = tf::createQuaternionMsgFromRollPitchYaw(1.57, -1.0, 0.0); // grasp orientation
-    // tf::Quaternion q(0, 0, 0, 1); // suck orientation
-    // suck_pose.orientation.x = q.x();
-    // suck_pose.orientation.y = q.y();
-    // suck_pose.orientation.z = q.z();
-    // suck_pose.orientation.w = q.w();
 
-    suck_pose.orientation
-        = tf::createQuaternionMsgFromRollPitchYaw(1.57, -1.78, 0.0); // grasp orientation
     // rest pose
     gripper_rest_pose.orientation = grasp_pose.orientation;
     gripper_rest_pose.position.x = -0.2;
@@ -368,17 +362,30 @@ void poseInit()
     gripper_rest_pose.position.z = 0.4;
 
     // gripper place; // pre-defined
-    gripper_place_pose = gripper_rest_pose;
+    gripper_place_pose.orientation.x = 0.248;
+    gripper_place_pose.orientation.y = -0.663;
+    gripper_place_pose.orientation.z = -0.145;
+    gripper_place_pose.orientation.w = 0.690;
     gripper_place_pose.position.x = -0.43;
     gripper_place_pose.position.y = 0.08;
     gripper_place_pose.position.z = 0.3;
+
+    // suck_pose.orientation
+    //     = tf::createQuaternionMsgFromRollPitchYaw(1.57, -2.5, 0.0); // suck orientation
+    suck_pose.orientation.x = 0.190;
+    suck_pose.orientation.y = -0.639;
+    suck_pose.orientation.z = 0.705;
+    suck_pose.orientation.w = 0.240;
 
     sucker_rest_pose.orientation = suck_pose.orientation;
     sucker_rest_pose.position.x = -0.2;
     sucker_rest_pose.position.y = -0.3;
     sucker_rest_pose.position.z = 0.4;
 
-    sucker_place_pose = sucker_rest_pose;
+    sucker_place_pose.orientation.x = -0.296;
+    sucker_place_pose.orientation.y = -0.597;
+    sucker_place_pose.orientation.z = 0.352;
+    sucker_place_pose.orientation.w = 0.656;
     sucker_place_pose.position.x = -0.43;
     sucker_place_pose.position.y = 0.08;
     sucker_place_pose.position.z = 0.30;
@@ -399,11 +406,13 @@ void handleCollisionObj(build_workScene& buildWorkScene);
 void moveLineTarget(const geometry_msgs::Pose& start, const geometry_msgs::Pose& goal);
 ErrorCode hand_MsgConform_ActFinishedWait(id_data_msgs::ID_Data* notice_data_test,
     bool* msg_rec_flag, bool* finished_flag, notice_pub_sub* notice_test, string task);
+int evaluateMoveitPlan(moveit::planning_interface::MoveGroup::Plan& plan);
 
 int main(int argc, char** argv)
 {
     ros::init(argc, argv, "jaco_moveit_control_main");
     ros::NodeHandle nh;
+
     ros::AsyncSpinner spinner(2);
     spinner.start();
 
@@ -533,7 +542,6 @@ int main(int argc, char** argv)
                     start = group.getCurrentPose().pose; // virtual pose
                 } else {
                     start = pick_place.get_ee_pose(); // real pose from driver info.
-                    start.orientation = pregrasp_pose.orientation;
                 }
                 pose_name = "PREGRASP POSE";
                 confirmToAct(start, pregrasp_pose, pose_name);
@@ -583,26 +591,32 @@ int main(int argc, char** argv)
                     start.orientation = pregrasp_pose.orientation;
                 }
 
-                goal = grasp_pose;
-                goal.position.z += 0.06;
+                goal = start;
+                goal.position.z += 0.04;
                 pose_name = "MOVE TO REST (UP)";
                 confirmToAct(start, goal, pose_name);
                 moveLineTarget(start, goal);
 
-                start = goal;
+                if (DEBUG) {
+                    start = goal;
+                } else {
+                    start = pick_place.get_ee_pose();
+                    start.orientation = pregrasp_pose.orientation;
+                }
+                goal = start;
                 goal.position.y += PREGRASP_OFFSET;
                 pose_name = "MOVE OT REST (BACK)";
                 confirmToAct(start, goal, pose_name);
                 moveLineTarget(start, goal);
 
                 pose_name = "REST POSE";
-                confirmToAct(pregrasp_pose, gripper_rest_pose, pose_name);
+                confirmToAct(goal, gripper_rest_pose, pose_name);
                 moveToTarget(gripper_rest_pose);
 
             } else {
                 // suck mode, use_gripper_flag = false
                 presuck_pose = suck_pose;
-                presuck_pose.position.z += PREGRASP_OFFSET;
+                presuck_pose.position.z += PRESUCK_OFFSET_LOW;
                 presuck_pose.position.y += PREGRASP_OFFSET;
 
                 // 1. presuck
@@ -645,7 +659,7 @@ int main(int argc, char** argv)
                 if (DEBUG) {
                     start = goal;
                 } else {
-                    geometry_msgs::Pose start = pick_place.get_ee_pose();
+                    start = pick_place.get_ee_pose();
                     start.orientation = presuck_pose.orientation;
                 }
                 goal = suck_pose;
@@ -672,8 +686,8 @@ int main(int argc, char** argv)
                     start = pick_place.get_ee_pose();
                     start.orientation = presuck_pose.orientation;
                 }
-                goal = suck_pose;
-                goal.position.z += PREGRASP_OFFSET;
+                goal = start;
+                goal.position.z += 0.08;
                 pose_name = "SUCK UP BACK";
                 confirmToAct(start, goal, pose_name);
                 moveLineTarget(start, goal); // up
@@ -684,12 +698,14 @@ int main(int argc, char** argv)
                     start = pick_place.get_ee_pose();
                     start.orientation = presuck_pose.orientation;
                 }
-                goal = presuck_pose;
+                goal = start;
+                goal.position.y += PREGRASP_OFFSET;
                 pose_name = "SUCK BACKWARD BACK";
                 confirmToAct(start, goal, pose_name);
                 moveLineTarget(start, goal); // back
+
                 pose_name = "SUCK REST POSE";
-                confirmToAct(presuck_pose, sucker_rest_pose, pose_name);
+                confirmToAct(goal, sucker_rest_pose, pose_name);
                 moveToTarget(sucker_rest_pose);
             }
 
@@ -834,8 +850,8 @@ ErrorCode hand_MsgConform_ActFinishedWait(id_data_msgs::ID_Data* notice_data_tes
         if (wait_count % 20 == 0) // send msg again after waiting 1s
         {
             if (task == "FETCH") ROS_INFO("Waiting for hand to grasp/suck...");
-            if (tssk == "RELEASE") ROS_INFO("Waiting for hand to open/release...");
-            if (tssk == "SWITCH") ROS_INFO("Waiting for hand to switch mode...");
+            if (task == "RELEASE") ROS_INFO("Waiting for hand to open/release...");
+            if (task == "SWITCH") ROS_INFO("Waiting for hand to switch mode...");
         }
         notice_test->notice_sub_spinner(1);
         loop_rate.sleep();
@@ -887,7 +903,7 @@ void moveToTarget(const geometry_msgs::Pose& target)
     group.setGoalPositionTolerance(0.01);    // 3cm
     group.setGoalOrientationTolerance(0.01); // 5.729576129 * 2 deg
     group.setMaxVelocityScalingFactor(0.5);
-    group.setNumPlanningAttempts(2);
+    group.setNumPlanningAttempts(3);
     group.setStartStateToCurrentState();
     group.setPoseTarget(target);
 
@@ -895,7 +911,7 @@ void moveToTarget(const geometry_msgs::Pose& target)
                                         << group.getPlanningFrame() << " with obstacles");
 
     moveit::planning_interface::MoveGroup::Plan my_plan;
-    group.setPlanningTime(2.0);
+    group.setPlanningTime(4.0);
 
     int loops = 10; // planing tries
     bool success = false;
@@ -918,7 +934,10 @@ void moveToTarget(const geometry_msgs::Pose& target)
             ROS_INFO("Plan failed at try: %d", i);
         }
     }
-    if (!plan_valid) ROS_INFO("No plan found after 10 tries");
+    if (!plan_valid) {
+        ROS_INFO("No valid plan found after 20 tries");
+        exit(0);
+    }
 
     // Execute the plan
     ROS_INFO("Print n to execute the plan");
@@ -928,8 +947,6 @@ void moveToTarget(const geometry_msgs::Pose& target)
         ros::Time start = ros::Time::now();
         group.execute(my_plan);
         ROS_INFO_STREAM("Motion duration: " << (ros::Time::now() - start).toSec());
-    } else {
-        return;
     }
 }
 
@@ -999,7 +1016,7 @@ void moveLineTarget(const geometry_msgs::Pose& start, const geometry_msgs::Pose&
     }
 
     moveit::planning_interface::MoveGroup group("arm");
-    group.setGoalPositionTolerance(0.01);    // 3cm
+    group.setGoalPositionTolerance(0.02);    // 3cm
     group.setGoalOrientationTolerance(0.01); // 5.729576129 * 2 deg
     group.setMaxVelocityScalingFactor(0.5);
     moveit_msgs::RobotTrajectory trajectory;
@@ -1009,7 +1026,15 @@ void moveLineTarget(const geometry_msgs::Pose& start, const geometry_msgs::Pose&
 
     moveit::planning_interface::MoveGroup::Plan cartesian_plan;
     cartesian_plan.trajectory_ = trajectory;
-    group.execute(cartesian_plan);
+
+    int plan_steps = evaluateMoveitPlan(cartesian_plan);
+    if (plan_steps < 20) {
+        ROS_INFO_STREAM( "Plan found in " << cartesian_plan.planning_time_
+                               << " seconds with " << plan_steps << " steps");
+        group.execute(cartesian_plan);
+    }else{
+        exit(0);
+    }
 }
 
 void confirmToAct(

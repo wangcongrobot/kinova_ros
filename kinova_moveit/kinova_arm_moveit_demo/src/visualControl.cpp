@@ -38,7 +38,7 @@
 
 using namespace std;
 #define PREGRASP_OFFSET 0.20
-#define DEBUG false
+#define DEBUG true
 typedef int ErrorCode;
 // hand flags
 bool hand_rec_msg_flag = false;
@@ -53,20 +53,22 @@ darknet_ros_msgs::TargetPoint canPoint;
 void kinectCallback(const darknet_ros_msgs::TargetPoints::ConstPtr& msg)
 {
     if (arm_rec_msg_flag == false) {
-        for (int i = 0; msg->target_points.size(); i++) {
+        for (int i = 0; i < msg->target_points.size(); i++) {
             if (msg->target_points[i].Class == "can") {
                 canPoint = msg->target_points[i];
+                ROS_INFO_STREAM("can position: " << canPoint);
                 break;
             }
         }
         goal_pose.position.x = canPoint.camera_x;
         goal_pose.position.y = canPoint.camera_y;
-        goal_pose.position.z = canPoint.camera_z + 0.03;
+        goal_pose.position.z = canPoint.camera_z + 0.02;
         goal_pose.orientation = tf::createQuaternionMsgFromRollPitchYaw(1.57, -1.0, 0.0);
-        arm_rec_msg_flag = true;
-        ROS_INFO_STREAM("Get object pose from kinect");
-    } else
-        return;
+        if (goal_pose.position.x != 0 && goal_pose.position.y < -0.1) {
+            arm_rec_msg_flag = true;
+            ROS_INFO_STREAM("Get object pose from kinect");
+        }
+    }
 }
 
 class notice_pub_sub {
@@ -169,6 +171,8 @@ int evaluateMoveitPlan(moveit::planning_interface::MoveGroup::Plan& plan); // re
 int main(int argc, char** argv)
 {
     ros::init(argc, argv, "visualControl");
+    ros::NodeHandle nh;
+
     notice_pub_sub notice_test;
     id_data_msgs::ID_Data notice_data_pub;
 
@@ -195,15 +199,21 @@ int main(int argc, char** argv)
         goal_pose.position.z = atof(argv[3]);
     }
 
-    ros::NodeHandle nh;
     ros::AsyncSpinner spinner(1);
     spinner.start();
-
-    // test hk
     kinova::PickPlace pick_place(nh);
+    // test hk
 
     ros::Subscriber subKinect = nh.subscribe("/darknet_ros/target_points", 100, kinectCallback);
-    ros::spinOnce();
+    ros::Rate rate(200);
+    while (ros::ok()) {
+        if (arm_rec_msg_flag) {
+            ROS_INFO("Target position returned");
+            break;
+        }
+        ros::spinOnce();
+        rate.sleep();
+    }
 
     ROS_INFO_STREAM("Target object position:" << goal_pose.position.x << "," << goal_pose.position.y
                                               << "," << goal_pose.position.z);
@@ -251,6 +261,7 @@ int main(int argc, char** argv)
     pose_name = "TARGET AND GRASP";
     confirmToAct(start, goal, pose_name);
     moveLineTarget(start, goal);
+    ros::Duration(3).sleep();
 
     // 3. GRASP TEST HK
     ROS_INFO("Begin grasp demo, press n to next:");
@@ -281,17 +292,25 @@ int main(int argc, char** argv)
         start.orientation = pregrasp_pose.orientation;
     }
 
-    goal = goal_pose;
+    goal = start;
     goal.position.z += 0.06;
     pose_name = "PREGRASP (UP)";
     confirmToAct(start, goal, pose_name);
     moveLineTarget(start, goal);
+    ros::Duration(5).sleep();
 
-    start = goal;
+    if (DEBUG) {
+        start = goal;
+    } else {
+        start = pick_place.get_ee_pose();
+        start.orientation = pregrasp_pose.orientation;
+    }
+    goal = start;
     goal.position.y += PREGRASP_OFFSET;
     pose_name = "PREGRASP (BACK)";
     confirmToAct(start, goal, pose_name);
     moveLineTarget(start, goal);
+    ros::Duration(5).sleep();
 
     pose_name = "REST POSE";
     confirmToAct(pregrasp_pose, gripper_rest_pose, pose_name);
@@ -309,7 +328,7 @@ void moveLineTarget(const geometry_msgs::Pose& start, const geometry_msgs::Pose&
 
     std::vector<geometry_msgs::Pose> waypoints;
     waypoints.push_back(way_pose); // first pose waypoint
-    int num_waypoint = 5;
+    int num_waypoint = 8;
     float delta_x = (goal.position.x - start.position.x) / (num_waypoint - 1);
     float delta_y = (goal.position.y - start.position.y) / (num_waypoint - 1);
     float delta_z = (goal.position.z - start.position.z) / (num_waypoint - 1);
@@ -410,7 +429,7 @@ void moveToTarget(const geometry_msgs::Pose& target)
     moveit::planning_interface::MoveGroup::Plan my_plan;
     group.setPlanningTime(3.0);
 
-    int loops = 10; // planing tries
+    int loops = 20; // planing tries
     bool success = false;
     bool plan_valid = false;
     int plan_steps = 0;
@@ -431,7 +450,11 @@ void moveToTarget(const geometry_msgs::Pose& target)
             ROS_INFO("Plan failed at try: %d", i);
         }
     }
-    if (!plan_valid) ROS_INFO("No plan found after 10 tries");
+    
+    if (!plan_valid) {
+        ROS_INFO("No valid plan found after 20 tries");
+        exit(0);
+    }
 
     // Execute the plan
     ROS_INFO("Print n to execute the plan");
@@ -441,8 +464,6 @@ void moveToTarget(const geometry_msgs::Pose& target)
         ros::Time start = ros::Time::now();
         group.execute(my_plan);
         ROS_INFO_STREAM("Motion duration: " << (ros::Time::now() - start).toSec());
-    } else {
-        return;
     }
 }
 
@@ -475,13 +496,13 @@ ErrorCode hand_MsgConform_ActFinishedWait(id_data_msgs::ID_Data* notice_data_tes
     // hand data receive judge
     int wait_count = 0;
     while (ros::ok()) {
+        wait_count++;
         if (*msg_rec_flag == true) {
             *msg_rec_flag = false;
             wait_count = 0; // reset time for next loop
             break;
         }
 
-        wait_count++;
         if (wait_count % 10 == 0) // send msg again after waiting 1s
         {
             ROS_ERROR("Hand didn't receive msg, retrying...");
