@@ -319,8 +319,8 @@ void notice_pub_sub::notice_msgCallback(const id_data_msgs::ID_Data::ConstPtr& n
         if (fabs(x) < 0.5 && y < -0.3) {
             ROS_INFO("Valid object position from kinect");
             suck_pose.position.x = x;
-            suck_pose.position.y = y - 0.02; // correction
-            suck_pose.position.z = z + 0.13; // correction
+            suck_pose.position.y = y + 0.01; // correction
+            suck_pose.position.z = z + 0.12; // correction
             // kinect_target_valid = true;
             arm_start_fetch_flag = true;
             use_gripper_flag = false;
@@ -536,17 +536,6 @@ int main(int argc, char** argv)
                 pregrasp_pose.position.y += PREGRASP_OFFSET;
                 // ROS_INFO_STREAM("pregrasp pose: " << pregrasp_pose);
 
-                // 1. pregrasp
-                geometry_msgs::Pose start;
-                if (DEBUG) {
-                    start = group.getCurrentPose().pose; // virtual pose
-                } else {
-                    start = pick_place.get_ee_pose(); // real pose from driver info.
-                }
-                pose_name = "PREGRASP POSE";
-                confirmToAct(start, pregrasp_pose, pose_name);
-                moveToTarget(pregrasp_pose); // plan to pre-grasp pose
-
                 // switch to grasp mode
                 if (hand_current_mode != "grasp") {
                     notice_data.id = 1;
@@ -560,6 +549,17 @@ int main(int argc, char** argv)
                     error_deal(err);
                     hand_current_mode = "grasp";
                 }
+
+                // 1. pregrasp
+                geometry_msgs::Pose start;
+                if (DEBUG) {
+                    start = group.getCurrentPose().pose; // virtual pose
+                } else {
+                    start = pick_place.get_ee_pose(); // real pose from driver info.
+                }
+                pose_name = "PREGRASP POSE";
+                confirmToAct(start, pregrasp_pose, pose_name);
+                moveToTarget(pregrasp_pose); // plan to pre-grasp pose
 
                 // 2. move forward
                 if (DEBUG) {
@@ -619,17 +619,6 @@ int main(int argc, char** argv)
                 presuck_pose.position.z += PRESUCK_OFFSET_LOW;
                 presuck_pose.position.y += PREGRASP_OFFSET;
 
-                // 1. presuck
-                geometry_msgs::Pose start;
-                if (DEBUG) {
-                    start = group.getCurrentPose().pose;
-                } else {
-                    start = pick_place.get_ee_pose(); // real pose from driver info.
-                }
-                pose_name = "PRESUCK POSE";
-                confirmToAct(start, presuck_pose, pose_name);
-                moveToTarget(presuck_pose); // plan to pre-grasp pose
-
                 // 2.swich to suck mode
                 if (hand_current_mode != "suck") {
                     notice_data.id = 1;
@@ -642,6 +631,17 @@ int main(int argc, char** argv)
                     error_deal(err);
                     hand_current_mode = "suck";
                 }
+
+                // 1. presuck
+                geometry_msgs::Pose start;
+                if (DEBUG) {
+                    start = group.getCurrentPose().pose;
+                } else {
+                    start = pick_place.get_ee_pose(); // real pose from driver info.
+                }
+                pose_name = "PRESUCK POSE";
+                confirmToAct(start, presuck_pose, pose_name);
+                moveToTarget(presuck_pose); // plan to pre-grasp pose
 
                 // 3. move forward and downside
                 if (DEBUG) {
@@ -675,6 +675,7 @@ int main(int argc, char** argv)
                 ROS_INFO("notice sucker to suck (1 8)");
 
                 // wait suck finish
+                // TODO:no suck feedback
                 ErrorCode err = hand_MsgConform_ActFinishedWait(&notice_data, &hand_msg_rec_flag,
                     &hand_act_finished_flag, &notice_test, "FETCH");
                 error_deal(err);
@@ -1028,11 +1029,12 @@ void moveLineTarget(const geometry_msgs::Pose& start, const geometry_msgs::Pose&
     cartesian_plan.trajectory_ = trajectory;
 
     int plan_steps = evaluateMoveitPlan(cartesian_plan);
-    if (plan_steps < 20) {
-        ROS_INFO_STREAM( "Plan found in " << cartesian_plan.planning_time_
-                               << " seconds with " << plan_steps << " steps");
+    ROS_INFO_STREAM("Line plan steps: " << plan_steps);
+    if (plan_steps < 30) {
+        ROS_INFO_STREAM("Plan found in " << cartesian_plan.planning_time_ << " seconds with "
+                                         << plan_steps << " steps");
         group.execute(cartesian_plan);
-    }else{
+    } else {
         exit(0);
     }
 }

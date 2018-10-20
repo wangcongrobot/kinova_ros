@@ -204,16 +204,16 @@ int main(int argc, char** argv)
     kinova::PickPlace pick_place(nh);
     // test hk
 
-    ros::Subscriber subKinect = nh.subscribe("/darknet_ros/target_points", 100, kinectCallback);
-    ros::Rate rate(200);
-    while (ros::ok()) {
-        if (arm_rec_msg_flag) {
-            ROS_INFO("Target position returned");
-            break;
-        }
-        ros::spinOnce();
-        rate.sleep();
-    }
+    // ros::Subscriber subKinect = nh.subscribe("/darknet_ros/target_points", 100, kinectCallback);
+    // ros::Rate rate(200);
+    // while (ros::ok()) {
+    //     if (arm_rec_msg_flag) {
+    //         ROS_INFO("Target position returned");
+    //         break;
+    //     }
+    //     ros::spinOnce();
+    //     rate.sleep();
+    // }
 
     ROS_INFO_STREAM("Target object position:" << goal_pose.position.x << "," << goal_pose.position.y
                                               << "," << goal_pose.position.z);
@@ -264,25 +264,25 @@ int main(int argc, char** argv)
     ros::Duration(3).sleep();
 
     // 3. GRASP TEST HK
-    ROS_INFO("Begin grasp demo, press n to next:");
-    string pause_;
-    cin >> pause_;
+    // ROS_INFO("Begin grasp demo, press n to next:");
+    // string pause_;
+    // cin >> pause_;
 
-    if ("n" == pause_) {
-        ROS_INFO("Begin grasp demo");
+    // if ("n" == pause_) {
+    //     ROS_INFO("Begin grasp demo");
 
-    } else {
-        return EXIT_FAILURE;
-    }
+    // } else {
+    //     return EXIT_FAILURE;
+    // }
 
-    notice_test.notice_data_clear(&notice_data_pub);
-    notice_data_pub.id = 1;
-    notice_data_pub.data[0] = 3;
-    // notice_test.notice_pub_sub_pulisher(notice_data_pub);
-    ErrorCode err = hand_MsgConform_ActFinishedWait(
-        &notice_data_pub, &hand_rec_msg_flag, &hand_act_finished_flag, &notice_test);
-    error_deal(err);
-    ros::Duration(5).sleep();
+    // notice_test.notice_data_clear(&notice_data_pub);
+    // notice_data_pub.id = 1;
+    // notice_data_pub.data[0] = 3;
+    // // notice_test.notice_pub_sub_pulisher(notice_data_pub);
+    // ErrorCode err = hand_MsgConform_ActFinishedWait(
+    //     &notice_data_pub, &hand_rec_msg_flag, &hand_act_finished_flag, &notice_test);
+    // error_deal(err);
+    // ros::Duration(5).sleep();
 
     // 4. move to rest pose
     if (DEBUG) {
