@@ -54,3 +54,7 @@ kvh_driver/src/kvh_driver/
 *.pyc
 
 .vscode/
+
+# zip
+*.tar.gz
+*.zip

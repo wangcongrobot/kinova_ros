@@ -49,11 +49,7 @@
 // add obstacles into working space
 #include <add_scene_objects.h>
 #include <visualization_msgs/Marker.h>
-
-#include <add_scene_objects.h>    // handle scene obstacles
 using namespace kinova;
-
-
 
 const double FINGER_MAX = 6400;
 
@@ -255,47 +251,6 @@ void marker_visualize::clear_AllMarker()
     ros::Duration(0.1).sleep();
 }
 
-void handleCollisionObj(build_workScene& buildWorkScene)
-{
-
-    //   buildWorkScene.clear_WorkScene("table");
-    //   buildWorkScene.clear_WorkScene("kinectBody");
-    //   buildWorkScene.clear_WorkScene("kinectObs");
-
-    geometry_msgs::Pose tablePose, kinectBasePose, kinectBodyPose;
-
-    tablePose.position.x = 0.4;
-    tablePose.position.y = 0;
-    tablePose.position.z = 0.1; // avoid collision between arm and surface
-    buildWorkScene.add_boxModel("table", 1.0, 0.5, 0.01, tablePose);
-
-    // add kinect stick obstacle
-    kinectBasePose.position.x = 0.4;
-    kinectBasePose.position.y = 0;
-    kinectBasePose.position.z = 0.4;
-    tf::Quaternion qkinect = tf::createQuaternionFromRPY(0, 1.57, 1.57);
-    // tf::Quaternion qkinect = tf::createQuaternionFromRPY(0, 1.57, 0);
-    // ROS_INFO_STREAM("Kinect obs pose: " << qkinect);
-    kinectBasePose.orientation.x = qkinect[0];
-    kinectBasePose.orientation.y = qkinect[1];
-    kinectBasePose.orientation.z = qkinect[2];
-    kinectBasePose.orientation.w = qkinect[3];
-    buildWorkScene.add_boxModel("kinectBase", 0.8, 0.03, 0.02, kinectBasePose);
-
-    // add kinect body obstacle
-    kinectBodyPose.position.x = 0.4;   // 0.35 VS 0.3
-    kinectBodyPose.position.y = -0.05; //-0.05 VS 0
-    kinectBodyPose.position.z = 0.70;  // 0.75
-    tf::Quaternion qbody = tf::createQuaternionFromRPY(0, 0, -1.57);
-    // tf::Quaternion qbody = tf::createQuaternionFromRPY(0, -0.26, 0);
-    // ROS_INFO_STREAM("Kinect obs pose: " << qbody);
-    kinectBodyPose.orientation.x = qbody[0];
-    kinectBodyPose.orientation.y = qbody[1];
-    kinectBodyPose.orientation.z = qbody[2];
-    kinectBodyPose.orientation.w = qbody[3];
-    buildWorkScene.add_boxModel("kinectBody", 0.1, 0.3, 0.1, kinectBodyPose);
-}
-
 int main(int argc, char** argv)
 {
     ros::init(argc, argv, "move_group_interface_test");
@@ -309,10 +264,48 @@ int main(int argc, char** argv)
     ros::NodeHandle n;
     ROS_INFO("Add collision objects in workspace");
     build_workScene buildWorkScene(n);
-    moveit::planning_interface::PlanningSceneInterface planning_scene_interface;
-    handleCollisionObj(buildWorkScene); // add objects
-    planning_scene_interface.addCollisionObjects(
-        buildWorkScene.collision_objects); // add collision objects into world
+    geometry_msgs::Pose tablePose, prismPose, hollowPrismPose, kinectObsPose, kinectBodyPose;
+
+    // add plane obstacle under the arm
+    tablePose.position.x = 0;
+    tablePose.position.y = 0;
+    tablePose.position.z = -0.03 / 2.0;
+    buildWorkScene.add_boxModel("table", 1.5, 1.5, 0.03, tablePose);
+
+    // add kinect obstacle
+    kinectObsPose.position.x = 0.5;
+    kinectObsPose.position.y = 0;
+    kinectObsPose.position.z = 0.3;
+    tf::Quaternion qkinect = tf::createQuaternionFromRPY(0, 1.57, 0);
+    // ROS_INFO_STREAM("Kinect obs pose: " << qkinect);
+    kinectObsPose.orientation.x = qkinect[0];
+    kinectObsPose.orientation.y = qkinect[1];
+    kinectObsPose.orientation.z = qkinect[2];
+    kinectObsPose.orientation.w = qkinect[3];
+    buildWorkScene.add_boxModel("kinectObs", 0.6, 0.05, 0.02, kinectObsPose);
+
+    // add kinect body obstacle
+    kinectBodyPose.position.x = 0.5;
+    kinectBodyPose.position.y = 0;
+    kinectBodyPose.position.z = 0.65;
+    tf::Quaternion qbody = tf::createQuaternionFromRPY(0, 1.57, 0);
+    // ROS_INFO_STREAM("Kinect obs pose: " << qbody);
+    kinectBodyPose.orientation.x = qbody[0];
+    kinectBodyPose.orientation.y = qbody[1];
+    kinectBodyPose.orientation.z = qbody[2];
+    kinectBodyPose.orientation.w = qbody[3];
+    buildWorkScene.add_boxModel("kinectBody", 0.1, 0.3, 0.02, kinectBodyPose);
+
+    //   prismPose.position.x = 0.1;
+    //   prismPose.position.y = -0.65;
+    //   prismPose.position.z = 0.1;
+    // buildWorkScene.add_boxModel("prism", 0.05, 0.05, 0.2, prismPose);
+
+    //   hollowPrismPose.position.x = 0.4;
+    //   hollowPrismPose.position.y = -0.3;
+    //   hollowPrismPose.position.z = 0.0;
+    //   hollowPrismPose.orientation.w = 1.0;
+    // buildWorkScene.add_meshModel("hollowPrism", hollowPrism, hollowPrismPose);
     ROS_INFO_STREAM("Scene initialization finished \n"
                     << "Input re to remove all object or n to next:");
 
@@ -524,7 +517,7 @@ int main(int argc, char** argv)
     ros::Duration(5).sleep();
     group_->detachObject("prism");
 
-    //moveit::planning_interface::PlanningSceneInterface planning_scene_interface;
+    moveit::planning_interface::PlanningSceneInterface planning_scene_interface;
     ROS_INFO_NAMED("tutorial", "Remove the object from the world");
     std::vector<std::string> object_ids;
     object_ids.push_back("prism");

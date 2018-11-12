@@ -14,6 +14,7 @@ find_package(catkin REQUIRED COMPONENTS
   rospy
 	message_generation
   std_msgs
+  actionlib
 )
 
 find_package(catkin REQUIRED
@@ -61,6 +62,7 @@ catkin_package(
 include_directories(
   include
   ${catkin_INCLUDE_DIRS}
+  include ${Eigen_INCLUDE_DIRS}
 )
 
 # Header files direcotory
@@ -107,13 +109,42 @@ add_executable(planWithObstacle src/planWithObstacle.cpp)
 target_link_libraries(planWithObstacle add_scene_objects ${catkin_LIBRARIES} ${Boost_LIBRARIES} ${kinova_driver_LIBRARIES})
 install(TARGETS planWithObstacle DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 
-add_executable(visualControl src/visualControl.cpp src/pick_place.cpp)
+add_executable(visualControl 
+               src/visualControl.cpp 
+               src/pick_place.cpp
+               src/parser.cpp)
 target_link_libraries(visualControl add_scene_objects ${catkin_LIBRARIES} ${Boost_LIBRARIES} ${kinova_driver_LIBRARIES})
 install(TARGETS planWithObstacle DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 
 add_executable(mainControl src/mainControl.cpp src/pick_place.cpp)
 target_link_libraries(mainControl add_scene_objects ${catkin_LIBRARIES} ${Boost_LIBRARIES} ${kinova_driver_LIBRARIES})
 install(TARGETS planWithObstacle DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
+
+# wangcong
+add_executable(action_control 
+               src/action_control.cpp 
+               src/pick_place.cpp
+               src/parser.cpp)
+target_link_libraries(action_control ${catkin_LIBRARIES} ${Boost_LIBRARIES} ${kinova_driver_LIBRARIES})
+install(TARGETS planWithObstacle DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
+
+# wangcong
+add_executable(mainControl-wangcong 
+              src/mainControl-wangcong.cpp 
+              src/pick_place.cpp
+              src/functions.cpp
+              src/globals.cpp
+              src/notice_pub_sub.cpp)
+target_link_libraries(mainControl-wangcong 
+                      add_scene_objects 
+                      parser 
+                      ${catkin_LIBRARIES} ${Boost_LIBRARIES} ${kinova_driver_LIBRARIES})
+install(TARGETS planWithObstacle DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
+
+add_library(parser src/parser.cpp)
+target_link_libraries(parser ${catkin_LIBRARIES} ${Boost_LIBRARIES} ${kinova_driver_LIBRARIES})
+
+
 
 # python executable scripts
 # install(PROGRAMS

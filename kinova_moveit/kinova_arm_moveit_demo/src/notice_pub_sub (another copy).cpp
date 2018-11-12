@@ -14,9 +14,8 @@ notice_pub_sub::notice_pub_sub()
     notice_spinner = new ros::AsyncSpinner(1, &notice_callbackqueue);
 
     notice_publisher = notice_handle.advertise<id_data_msgs::ID_Data>("/notice", 50);
-    
-    ROS_DEBUG("notice_pub_sub initialize!");
-//   init_flags();
+  
+  init_flags();
 }
 
 void notice_pub_sub::notice_pub_sub_pulisher(id_data_msgs::ID_Data id_data)
@@ -209,109 +208,109 @@ void notice_pub_sub::notice_data_clear(id_data_msgs::ID_Data* test)
     for (int i = 0; i < 8; i++) test->data[i] = 0;
 }
 
-// void notice_pub_sub::error_deal(int error_nu)
-// {
-//     switch (error_nu) {
-//     case 1: {
-//         ROS_ERROR("Hand doesn't work normally!");
-//         break;
-//     }
-//     case 2: {
-//         ROS_ERROR("Dashgo doesn't work normally!");
-//         break;
-//     }
-//     case 3: {
-//         ROS_ERROR("Kinect doesn't work normally!");
-//         break;
-//     }
-//     case 4: {
-//         ROS_ERROR("Kinova Arm doesn't work normally!");
-//         break;
-//     }
-//     default:
-//         break;
-//     }
-// }
+void notice_pub_sub::error_deal(int error_nu)
+{
+    switch (error_nu) {
+    case 1: {
+        ROS_ERROR("Hand doesn't work normally!");
+        break;
+    }
+    case 2: {
+        ROS_ERROR("Dashgo doesn't work normally!");
+        break;
+    }
+    case 3: {
+        ROS_ERROR("Kinect doesn't work normally!");
+        break;
+    }
+    case 4: {
+        ROS_ERROR("Kinova Arm doesn't work normally!");
+        break;
+    }
+    default:
+        break;
+    }
+}
 
-// ErrorCode notice_pub_sub::hand_MsgConform_ActFinishedWait(id_data_msgs::ID_Data* notice_data_test,
-//     bool* msg_rec_flag, bool* finished_flag, notice_pub_sub* notice_test, std::string task)
-// {
-//     id_data_msgs::ID_Data notice_data;
-//     int loop_hz = 10;
-//     ros::Rate loop_rate(loop_hz);
+ErrorCode notice_pub_sub::hand_MsgConform_ActFinishedWait(id_data_msgs::ID_Data* notice_data_test,
+    bool* msg_rec_flag, bool* finished_flag, notice_pub_sub* notice_test, string task)
+{
+    id_data_msgs::ID_Data notice_data;
+    int loop_hz = 10;
+    ros::Rate loop_rate(loop_hz);
 
-//     notice_data_clear(&notice_data);
-//     notice_data.id = notice_data_test->id;
-//     for (int i = 0; i < 8; i++) notice_data.data[i] = notice_data_test->data[i];
-//     notice_test->notice_pub_sub_pulisher(notice_data);
+    notice_data_clear(&notice_data);
+    notice_data.id = notice_data_test->id;
+    for (int i = 0; i < 8; i++) notice_data.data[i] = notice_data_test->data[i];
+    notice_test->notice_pub_sub_pulisher(notice_data);
 
-//     // hand data receive judge
-//     int wait_count = 0;
-//     while (ros::ok()) {
-//         if (*msg_rec_flag == true) {
-//             *msg_rec_flag = false;
-//             wait_count = 0; // reset time for next loop
-//             break;
-//         }
+    // hand data receive judge
+    int wait_count = 0;
+    while (ros::ok()) {
+        if (*msg_rec_flag == true) {
+            *msg_rec_flag = false;
+            wait_count = 0; // reset time for next loop
+            break;
+        }
 
-//         wait_count++;
-//         if (wait_count % 20 == 0) // send msg again after waiting 1s
-//         {
-//             ROS_ERROR("Hand didn't receive msg, retrying...");
-//             notice_test->notice_pub_sub_pulisher(notice_data);
-//         }
+        wait_count++;
+        if (wait_count % 20 == 0) // send msg again after waiting 1s
+        {
+            ROS_ERROR("Hand didn't receive msg, retrying...");
+            notice_test->notice_pub_sub_pulisher(notice_data);
+        }
 
-//         if (wait_count >= 2000) {
-//             error_no = notice_data.id;
-//             goto next;
-//         }
-//         notice_test->notice_sub_spinner(1);
-//         loop_rate.sleep();
-//     }
-//     // hand action finish judge
-//     while (ros::ok()) {
-//         if (*finished_flag == true) {
-//             *finished_flag = false;
-//             break;
-//         }
-//         wait_count++;
-//         if (wait_count % 20 == 0) // send msg again after waiting 1s
-//         {
-//             if (task == "FETCH") ROS_INFO("Waiting for hand to grasp/suck...");
-//             if (task == "RELEASE") ROS_INFO("Waiting for hand to open/release...");
-//             if (task == "SWITCH") ROS_INFO("Waiting for hand to switch mode...");
-//         }
-//         notice_test->notice_sub_spinner(1);
-//         loop_rate.sleep();
-//     }
-// next:
-//     return error_no;
-// }
+        if (wait_count >= 2000) {
+            error_no = notice_data.id;
+            goto next;
+        }
+        notice_test->notice_sub_spinner(1);
+        loop_rate.sleep();
+    }
+    // hand action finish judge
+    while (ros::ok()) {
+        if (*finished_flag == true) {
+            *finished_flag = false;
+            break;
+        }
+        wait_count++;
+        if (wait_count % 20 == 0) // send msg again after waiting 1s
+        {
+            if (task == "FETCH") ROS_INFO("Waiting for hand to grasp/suck...");
+            if (task == "RELEASE") ROS_INFO("Waiting for hand to open/release...");
+            if (task == "SWITCH") ROS_INFO("Waiting for hand to switch mode...");
+        }
+        notice_test->notice_sub_spinner(1);
+        loop_rate.sleep();
+    }
+next:
+    return error_no;
+}
 
-// void notice_pub_sub::init_flags()
-// {
-//   // hand flags
-//   close_hand_flag = false;
-//   open_hand_flag = false;
-//   hand_msg_rec_flag = false;
-//   hand_act_finished_flag = false;
-//   soft_close_hand_flag = false;
-//   switch_suck_flag = false;
-//   begin_suck_flag = false;
-//   stop_suck_flag = false;
+void notice_pub_sub::init_flags()
+{
+  // hand flags
+  close_hand_flag = false;
+  open_hand_flag = false;
+  hand_msg_rec_flag = false;
+  hand_act_finished_flag = false;
+  soft_close_hand_flag = false;
+  switch_suck_flag = false;
+  begin_suck_flag = false;
+  stop_suck_flag = false;
   
-//   // main loop flags: arm control section,id=4
-//   arm_start_fetch_flag = false;  // data[0]=1
-//   arm_stop_fetch_flag = false;   // data[0]=0
-//   arm_keep_fetch_flag = false;   // data[0]=2
-//   arm_release_obj_flag = false;  // data[0]=3
-//   arm_msg_rec_flag = false;      // data[0]=14
-//   arm_act_finished_flag = false; // data[0]=15
-//   use_gripper_flag = false;       // alvin, grasp or suck depend on target
+  // main loop flags: arm control section,id=4
+  arm_start_fetch_flag = false;  // data[0]=1
+  arm_stop_fetch_flag = false;   // data[0]=0
+  arm_keep_fetch_flag = false;   // data[0]=2
+  arm_release_obj_flag = false;  // data[0]=3
+  arm_msg_rec_flag = false;      // data[0]=14
+  arm_act_finished_flag = false; // data[0]=15
+  use_gripper_flag = false;       // alvin, grasp or suck depend on target
   
-//   // return error number
-//   error_num = 0;
+  // return error number
+  error_num = 0;
   
-// }
+}
 
 

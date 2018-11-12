@@ -1,0 +1,2 @@
+20181112:
+rosrun kinova_arm_moveit_demo visualControl 0 -0.0 -0.0 90 -30 5 100 2

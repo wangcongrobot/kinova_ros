@@ -8,37 +8,58 @@
 #include <geometric_shapes/shape_operations.h>
 #include <geometric_shapes/solid_primitive_dims.h>
 #include <geometry_msgs/PointStamped.h>
-#include <tf/tf.h>
-#include <tf/transform_listener.h>
+// #include <tf2/tf2.h>
+// #include <tf2/transform_listener.h>
+
+#include <tf2_eigen/tf2_eigen.h> 
+#include <tf2/LinearMath/Vector3.h>
+#include <tf2/LinearMath/Matrix3x3.h>
+#include <tf2/LinearMath/Quaternion.h>
+#include <tf2/LinearMath/Transform.h>
+#include <tf2/transform_datatypes.h>
+#include <tf/transform_datatypes.h>
+// #include <actionlib/client/SimpleActionClient.h>
+#include <actionlib/client/simple_action_client.h>
 
 // moveit
+#include <control_msgs/FollowJointTrajectoryAction.h>
 #include <moveit/move_group_interface/move_group.h>
 #include <moveit/planning_scene_interface/planning_scene_interface.h>
-
+#include <moveit/robot_model_loader/robot_model_loader.h>
+#include <moveit/robot_model_loader/robot_model_loader.h>
+#include <moveit/robot_trajectory/robot_trajectory.h>
+#include <moveit/planning_request_adapter/planning_request_adapter.h>
+#include <moveit/trajectory_processing/iterative_time_parameterization.h>
+#include <moveit_msgs/AttachedCollisionObject.h>
+#include <moveit_msgs/CollisionObject.h>
 #include <moveit_msgs/DisplayRobotState.h>
 #include <moveit_msgs/DisplayTrajectory.h>
 #include <moveit_msgs/RobotTrajectory.h>
 #include <trajectory_msgs/JointTrajectory.h>
 #include <trajectory_msgs/JointTrajectoryPoint.h>
 
-#include <moveit_msgs/AttachedCollisionObject.h>
-#include <moveit_msgs/CollisionObject.h>
-
 // Std C++ headers
 #include <map>
 #include <string>
 #include <vector>
 
+// Eigen
+#include <Eigen/Core>
+#include <Eigen/Geometry>
+#include <Eigen/Dense>
+
 // custom headers
 #include "darknet_ros_msgs/TargetPoint.h" // kinect info
 #include "darknet_ros_msgs/TargetPoints.h"
 #include "id_data_msgs/ID_Data.h" //using for notie event
-#include <add_scene_objects.h>    // handle scene obstacles
+#include "parser.h"
+#include <add_scene_objects.h> // handle scene obstacles
 #include <pick_place.h>
 
 using namespace std;
 #define PREGRASP_OFFSET 0.20
-#define DEBUG true
+#define DEBUG false
+// const double Pi = 3141592653;
 typedef int ErrorCode;
 // hand flags
 bool hand_rec_msg_flag = false;
@@ -152,6 +173,30 @@ void notice_pub_sub::notice_data_clear(id_data_msgs::ID_Data* test)
     for (int i = 0; i < 8; i++) test->data[i] = 0;
 }
 
+std::vector<double> current_joint_values;
+
+void currentJointValuesCallback(const sensor_msgs::JointState::ConstPtr& msg)
+{
+    current_joint_values.clear();
+    double temp_joint = 0;
+    for (int i = 0; i < msg->position.size(); i++) {
+        temp_joint = msg->position[i];
+        current_joint_values.push_back(temp_joint);
+    }
+    // ROS_INFO_STREAM("Get current joint values.");
+    // for(size_t i=0; i<6; i++)
+    // {
+    //     cout << current_joint_values[i] << endl;
+    // }
+}
+/*
+* roll: axis X, pitch: axis Y, yaw: Z
+*
+*/
+void moveLineFromCurrentState(double distanceX, double distanceY, double distanceZ);
+void moveLineFromCurrentState(double distanceX, double distanceY, double distanceZ,
+                              double roll, double pitch, double yaw,
+                              int number_point, int number_distance);
 /****************************function declaraton**********************/
 void notice_data_clear(id_data_msgs::ID_Data* test);
 
@@ -162,11 +207,14 @@ void moveLineTarget(const geometry_msgs::Pose& start, const geometry_msgs::Pose&
 void confirmToAct(
     const geometry_msgs::Pose& start, const geometry_msgs::Pose& goal, const string& str);
 void confirmToAct(const geometry_msgs::Pose& goal, const string& str);
+void confirmToAct();
 void handleCollisionObj(build_workScene& buildWorkScene);
 ErrorCode hand_MsgConform_ActFinishedWait(id_data_msgs::ID_Data* notice_data_test,
     bool* msg_rec_flag, bool* finished_flag, notice_pub_sub* notice_test);
 void error_deal(int error_no);
 int evaluateMoveitPlan(moveit::planning_interface::MoveGroup::Plan& plan); // return plan steps
+void moveLineFromCurrentState(
+    double distanceX, double distanceY, double distanceZ, int number_point, int number_distance);
 
 int main(int argc, char** argv)
 {
@@ -176,13 +224,27 @@ int main(int argc, char** argv)
     notice_pub_sub notice_test;
     id_data_msgs::ID_Data notice_data_pub;
 
+    double distanceX = 0;
+    double distanceY = 0;
+    double distanceZ = 0;
+    double yaw = 0;
+    double pitch = 0;
+    double roll = 0;
+    int number_point = 0;
+    int number_distance = 0;
+
+
+    ros::Subscriber sub_joint_values
+        = nh.subscribe("/j2n6s300_driver/out/joint_state", 10, currentJointValuesCallback);
+
     // dfault target value
     // goal_pose.position.x = -0.2;
     // goal_pose.position.y = -0.4;
     // goal_pose.position.z = 0.5;
-    goal_pose.orientation = tf::createQuaternionMsgFromRollPitchYaw(1.57, -1.0, 0.0);
+    goal_pose.orientation = tf::createQuaternionMsgFromRollPitchYaw(1.57, 0, 0.0);
+    // goal_pose.orientation = tf::createQuaternionMsgFromRollPitchYaw(1.57, -1.0, 0.0);
 
-    if (argc < 4) {
+    if (argc < 9) {
         ROS_INFO(" ");
         ROS_INFO("\tUsage:");
         ROS_INFO(" ");
@@ -197,6 +259,15 @@ int main(int argc, char** argv)
         goal_pose.position.x = atof(argv[1]);
         goal_pose.position.y = atof(argv[2]);
         goal_pose.position.z = atof(argv[3]);
+
+        distanceX            = atof(argv[1]);
+        distanceY            = atof(argv[2]);
+        distanceZ            = atof(argv[3]);
+        roll                 = atof(argv[4]); // X
+        pitch                = atof(argv[5]); // Y
+        yaw                  = atof(argv[6]); // Z
+        number_point         = atof(argv[7]);
+        number_distance      = atof(argv[8]);
     }
 
     ros::AsyncSpinner spinner(1);
@@ -246,8 +317,9 @@ int main(int argc, char** argv)
         start = pick_place.get_ee_pose(); // real pose from driver info.
     }
     string pose_name = "PREGRASP POSE";
-    confirmToAct(start, pregrasp_pose, pose_name);
-    moveToTarget(pregrasp_pose); // plan to pre-grasp pose
+
+    // confirmToAct(start, pregrasp_pose, pose_name);
+    // moveToTarget(pregrasp_pose); // plan to pre-grasp pose
 
     // 2. move forward
     if (DEBUG) {
@@ -259,9 +331,19 @@ int main(int argc, char** argv)
 
     geometry_msgs::Pose goal = goal_pose;
     pose_name = "TARGET AND GRASP";
-    confirmToAct(start, goal, pose_name);
-    moveLineTarget(start, goal);
-    ros::Duration(3).sleep();
+    // confirmToAct(start, goal, pose_name);
+    // moveLineTarget(start, goal);
+
+    // while(ros::ok())
+    {
+        ros::spinOnce();
+        moveLineFromCurrentState(distanceX, distanceY, distanceZ, roll, pitch, yaw, number_point, number_distance);
+        // ros::Duration(3).sleep();
+        // exit(0);
+    }
+
+    // ros::Duration(3).sleep();
+    exit(0);
 
     // 3. GRASP TEST HK
     // ROS_INFO("Begin grasp demo, press n to next:");
@@ -345,14 +427,23 @@ void moveLineTarget(const geometry_msgs::Pose& start, const geometry_msgs::Pose&
     group.setGoalPositionTolerance(0.01);    // 3cm
     group.setGoalOrientationTolerance(0.01); // 5.729576129 * 2 deg
     group.setMaxVelocityScalingFactor(0.5);
+    group.setPlannerId("RRTConnectkConfigDefault");
     moveit_msgs::RobotTrajectory trajectory;
-    const double jump_threshold = 0.0;
+    const double jump_threshold = 1.0;
     const double eef_step = 0.01;
     double fraction = group.computeCartesianPath(waypoints, eef_step, jump_threshold, trajectory);
-
-    moveit::planning_interface::MoveGroup::Plan cartesian_plan;
+    ROS_ERROR("fraction = %f", fraction);
+    moveit::planning_interface::MoveGroup::Plan cartesian_plan, temp_plan;
     cartesian_plan.trajectory_ = trajectory;
-    group.execute(cartesian_plan);
+    int plan_steps = trajectory.joint_trajectory.points.size();
+    ROS_INFO_STREAM("Line plan steps: " << plan_steps);
+    if (plan_steps < 25) {
+        ROS_INFO_STREAM("Plan found in " << cartesian_plan.planning_time_ << " seconds with "
+                                         << plan_steps << " steps");
+        group.execute(cartesian_plan);
+    } else {
+        exit(0);
+    }
 }
 
 void confirmToAct(
@@ -378,6 +469,17 @@ void confirmToAct(const geometry_msgs::Pose& goal, const string& str = "NULL")
          << "=================MOVE TO " + str + "=================="
          << "\n";
     ROS_INFO_STREAM("Move to target " << goal);
+    ROS_INFO_STREAM("Confirm start and end info and press n to start plan");
+    string pause_;
+    cin >> pause_;
+    if ("n" == pause_) {
+        ROS_INFO_STREAM("Valid info, begin to plan");
+    } else {
+        return;
+    }
+}
+void confirmToAct()
+{
     ROS_INFO_STREAM("Confirm start and end info and press n to start plan");
     string pause_;
     cin >> pause_;
@@ -419,6 +521,7 @@ void moveToTarget(const geometry_msgs::Pose& target)
     group.setGoalPositionTolerance(0.01);    // 3cm
     group.setGoalOrientationTolerance(0.01); // 5.729576129 * 2 deg
     group.setMaxVelocityScalingFactor(0.5);
+    group.setPlannerId("RRTConnectkConfigDefault");
     // group.setNumPlanningAttempts(1);
     group.setStartStateToCurrentState();
     group.setPoseTarget(target);
@@ -426,31 +529,36 @@ void moveToTarget(const geometry_msgs::Pose& target)
     ROS_INFO_STREAM("Planning to move " << group.getEndEffectorLink() << " with respect to frame  "
                                         << group.getPlanningFrame() << " with obstacles");
 
-    moveit::planning_interface::MoveGroup::Plan my_plan;
+    moveit::planning_interface::MoveGroup::Plan my_plan, temp_plan;
     group.setPlanningTime(3.0);
 
-    int loops = 20; // planing tries
+    int loops = 100; // planing tries
     bool success = false;
     bool plan_valid = false;
     int plan_steps = 0;
+    int current_steps = 0;
+    int min_steps = 100;
 
     // replan until valid paln is returned
     for (int i = 0; i < loops; i++) {
-        success = group.plan(my_plan);
+        success = group.plan(temp_plan);
         if (success) {
-            plan_steps = evaluateMoveitPlan(my_plan);
-            if (plan_steps < 25) {
+            current_steps = evaluateMoveitPlan(temp_plan);
+            if (current_steps < min_steps) {
+                my_plan = temp_plan;
+                min_steps = current_steps;
                 ROS_INFO_STREAM("Try " << i << ": plan found in " << my_plan.planning_time_
-                                       << " seconds with " << plan_steps << " steps");
-                plan_valid = true;
-                break;
+                                       << " seconds with " << min_steps << " steps");
+                // plan_valid = true;
+                // break;
             }
             // TODO: choose plans according to measures
         } else {
             ROS_INFO("Plan failed at try: %d", i);
         }
     }
-    
+    if (min_steps < 25) plan_valid = true;
+
     if (!plan_valid) {
         ROS_INFO("No valid plan found after 20 tries");
         exit(0);
@@ -615,4 +723,589 @@ geometry_msgs::Pose getCurrentState()
     // end effector point
     // pick_place.get_current_pose();
     return current_pose;
+}
+
+// void moveLineFromCurrentState(
+//     double distanceX, double distanceY, double distanceZ, int number_point, int number_distance)
+// {
+//     actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction> ac(
+//         "/j2n6s300/follow_joint_trajectory", true);
+//     ROS_INFO("Waiting for action server to start.");
+//     ac.waitForServer();
+//     ROS_INFO("Action server started, sending trajectory.");
+
+//     moveit::planning_interface::MoveGroup group("arm");
+//     moveit::planning_interface::MoveGroup::Plan plan;
+//     std::vector<double> joint_values = group.getCurrentJointValues();
+//     control_msgs::FollowJointTrajectoryGoal goal;
+//     moveit_msgs::RobotTrajectory robot_trajectory;
+
+//     // robot_trajectory::RobotTrajectory rt(model_loader.getModel(), "arm");
+//     // moveit_msgs::RobotTrajectory trajectory;
+//     double trajectory_velocity_scaling_ = 0.2;
+
+//     robot_trajectory::RobotTrajectory rt(group.getCurrentState()->getRobotModel(), group.getName());
+//     // rt.setRobotTrajectoryMsg(start_state, plan1.trajectory_);
+
+//     // trajectory_processing::IterativeParabolicTimeParameterization iptp;
+//     // iptp.computeTimeStamps(rt, trajectory_velocity_scaling_);
+//     // rt.getRobotTrajectoryMsg(plan1.trajectory_);
+
+//     Eigen::VectorXd qPre(6);
+//     qPre << 4.89, 3.29, 1.34, 4.19, 1.54, 1.30;
+//     // qPre << joint_values[0], joint_values[1], joint_values[2], joint_values[3], joint_values[4],
+//     // joint_values[5];
+//     cout << "qPre: " << qPre << endl;
+//     Parser parser;
+//     Eigen::Matrix4d transformation = parser.Foward(qPre);
+//     cout << "transformation: " << transformation << endl;
+//     goal.trajectory.header.frame_id = "j2n6s300_base";
+//     goal.trajectory.header.stamp = ros::Time::now();
+//     goal.trajectory.joint_names.clear();
+//     robot_trajectory.joint_trajectory.header.frame_id = "j2n6s300_base";
+//     robot_trajectory.joint_trajectory.header.stamp = ros::Time::now();
+//     robot_trajectory.joint_trajectory.joint_names.clear();
+
+//     for (int k = 0; k < 6; k++) {
+//         stringstream jointName;
+//         jointName << "j2n6s300_joint_" << (k + 1);
+//         goal.trajectory.joint_names.push_back(jointName.str());
+//         robot_trajectory.joint_trajectory.joint_names.push_back(jointName.str());
+//     }
+
+//     goal.trajectory.points.clear();
+//     robot_trajectory.joint_trajectory.points.clear();
+
+//     int number1 = number_point, number2 = number_distance;
+//     for (int i = 0; i < number1; i++) {
+//         transformation(0, 3) += distanceX / number1;
+//         transformation(1, 3) += distanceY / number1;
+//         transformation(2, 3) += distanceZ / number1;
+//         Eigen::VectorXd q(6);
+//         q = parser.Inverse(transformation, qPre);
+//         cout << "=========" << endl;
+//         if (q(0) > 10) continue;
+
+//         // printf("loops:%d",i);
+//         for (int j = 0; j < number2; j++) {
+//             trajectory_msgs::JointTrajectoryPoint point;
+//             for (int k = 0; k < 6; k++) {
+//                 point.positions.push_back(qPre(k) + (q(k) - qPre(k)) / number2 * j);
+//                 point.velocities.push_back(0.05); // 0.1
+//                 point.accelerations.push_back(0.05);
+//             }
+//             point.time_from_start = ros::Duration();
+//             goal.trajectory.points.push_back(point);
+//             robot_trajectory.joint_trajectory.points.push_back(point);
+//         }
+//         // printf("\n\njoint values : %d\n",i);
+//         std::cout << q << std::endl;
+//         qPre = q;
+//     }
+//     trajectory_processing::IterativeParabolicTimeParameterization iptp;
+//     // iptp.computeTimeStamps(robot_trajectory, 0.5);
+//     iptp.computeTimeStamps(robot_trajectory);
+//     // robot_trajectory.getRobotTrajectoryMsg(plan.trajectory_);
+//     plan.trajectory_ = robot_trajectory;
+//     ROS_INFO("Send goal to kinova");
+//     group.execute(plan);
+//     // ac.sendGoal(goal);
+//     // ac.waitForResult(ros::Duration(10));
+//     ROS_INFO_ONCE("\n\nMOVE TO TARGET SUCCESSFULLY\n\n");
+// }
+
+void moveLineFromCurrentState(double distanceX, double distanceY, double distanceZ,
+                              double roll, double pitch, double yaw,
+                              int number_point, int number_distance)
+{   
+    roll = (roll / 180.0 * Pi); // Ｘ
+    pitch = (pitch / 180.0 * Pi); // Y
+    yaw = (yaw / 180.0 * Pi); // Z
+    cout << "Received RPY (XYZ) angle: " << "\n" << roll * 180 / Pi << " " << pitch * 180 / Pi << " " << yaw * 180 / Pi << endl;
+
+    tf::Quaternion end_quat_tf;
+    /**@brief Set the quaternion using fixed axis RPY
+    * @param roll Angle around X 
+    * @param pitch Angle around Y
+    * @param yaw Angle around Z*/
+    end_quat_tf.setRPY(roll, pitch, yaw);
+
+    // int number_point = 20;
+    // int number_distance = 5;
+
+    // MoveIt!
+    moveit::planning_interface::MoveGroup group("arm");
+    moveit::planning_interface::MoveGroup::Plan plan;
+    group.setStartStateToCurrentState();
+    std::vector<double> joint_values = group.getCurrentJointValues();
+    cout << "Current pose: " << "\n" << group.getCurrentPose() << endl;
+    // cout << "Current RPY: " << "\n" << group.getCurrentRPY() << endl;
+    control_msgs::FollowJointTrajectoryGoal goal;
+    moveit_msgs::RobotTrajectory trajectory_msg;
+
+    Eigen::Matrix3d rotation_matrix_eigen;
+    tf::Matrix3x3 rotation_matrix_tf;
+    tf::Quaternion q_tf;
+    
+    Eigen::VectorXd qPre(6);
+    // qPre << 4.89, 3.29, 1.34, 4.19, 1.54, 1.30;
+    // qPre << joint_values[0], joint_values[1], joint_values[2], joint_values[3], joint_values[4],
+    qPre << current_joint_values[0], current_joint_values[1], 
+            current_joint_values[2], current_joint_values[3], 
+            current_joint_values[4], current_joint_values[5];
+    cout << "qPre: " << qPre << endl;
+    Parser parser;
+    Eigen::Matrix4d transformation = parser.Foward(qPre);
+    cout << "transformation1: " << "\n" << transformation << endl;
+    rotation_matrix_eigen << transformation(0,0), transformation(0,1), transformation(0,2),
+                             transformation(1,0), transformation(1,1), transformation(1,2),
+                             transformation(2,0), transformation(2,1), transformation(2,2);
+
+    Eigen::Quaterniond eigen_quat(rotation_matrix_eigen);
+    cout << "eigen Quaterniond1:" << "\n" << eigen_quat.x() << " " << eigen_quat.y() << " " << eigen_quat.z() << " " << eigen_quat.w() << endl;
+
+    // Eigen => tf
+    tf::Quaternion start_quat_tf(eigen_quat.x(), eigen_quat.y(), eigen_quat.z(), eigen_quat.w());
+    cout << "tf::Quaternion:" << "\n" << start_quat_tf.x() << " " << start_quat_tf.y() << " " << start_quat_tf.z() << " " << start_quat_tf.w() << endl;
+
+    // the tf::Quaternion has a method to acess roll pitch and yaw
+    double R, P, Y;
+    tf::Matrix3x3 tf_rotation_matrix(start_quat_tf);
+    tf_rotation_matrix.getRPY(R, P, Y);
+    cout << "tf RPY (XYZ) angle: " << "\n" << R * 180 / Pi << " " << P * 180 / Pi << " " << Y * 180 / Pi << endl;
+
+    goal.trajectory.header.frame_id = "j2n6s300_base";
+    goal.trajectory.header.stamp = ros::Time::now();
+    goal.trajectory.joint_names.clear();
+    trajectory_msg.joint_trajectory.header.frame_id = "j2n6s300_base";
+    trajectory_msg.joint_trajectory.header.stamp = ros::Time::now();
+    trajectory_msg.joint_trajectory.joint_names.clear();
+
+    for (int k = 0; k < 6; k++) 
+    {
+        stringstream jointName;
+        jointName << "j2n6s300_joint_" << (k + 1);
+        goal.trajectory.joint_names.push_back(jointName.str());
+        trajectory_msg.joint_trajectory.joint_names.push_back(jointName.str());
+    }
+
+    goal.trajectory.points.clear();
+    trajectory_msg.joint_trajectory.points.clear();
+
+    int number1 = number_point, number2 = number_distance;
+    tf::Quaternion temp_quat_tf;
+    for (int i = 0; i < number1; i++)
+    {
+        // translation
+        transformation(0, 3) += distanceX / number1;
+        transformation(1, 3) += distanceY / number1;
+        transformation(2, 3) += distanceZ / number1;
+        // rotation
+        temp_quat_tf = start_quat_tf.slerp(end_quat_tf, (1.0 / (float)number1) * (i+1));
+        tf::Matrix3x3 rotation_matrix_tf(temp_quat_tf);
+        rotation_matrix_tf.getRPY(R, P, Y);
+        cout << "Current tf RPY (XYZ) angle 2: " << "\n" << R * 180 / Pi << " " << P * 180 / Pi << " " << Y * 180 / Pi << endl;
+
+        Eigen::Quaterniond eigen_target_q(temp_quat_tf.w(), temp_quat_tf.x(), temp_quat_tf.y(), temp_quat_tf.z());
+        rotation_matrix_eigen = eigen_target_q.toRotationMatrix();
+
+        for(int m=0; m<3; m++)
+        {
+            for(int n=0; n<3; n++)
+            {
+                transformation(m,n) = rotation_matrix_eigen(m,n);
+            }
+        }
+        // transformation()
+        Eigen::VectorXd q(6);
+        q = parser.Inverse(transformation, qPre);
+        // cout << "=========" << endl;
+        if (q(0) > 10) continue;
+
+        // printf("loops:%d",i);
+        for (int j = 0; j < number2; j++) {
+            trajectory_msgs::JointTrajectoryPoint point;
+            for (int k = 0; k < 6; k++) {
+                point.positions.push_back(qPre(k) + (q(k) - qPre(k)) / number2 * j);
+                point.velocities.push_back(0.0);
+                point.accelerations.push_back(0.0);
+            }
+            point.time_from_start = ros::Duration();
+            goal.trajectory.points.push_back(point);
+            trajectory_msg.joint_trajectory.points.push_back(point);
+        }
+        // printf("\n\njoint values : %d\n",i);
+        // std::cout << q  << "\n" << std::endl;
+        qPre = q;
+    }
+    cout << "trajectory points number: " << trajectory_msg.joint_trajectory.points.size() << endl;
+
+    double trajectory_velocity_scaling_ = 0.3;
+    robot_trajectory::RobotTrajectory rt(group.getCurrentState()->getRobotModel(), group.getName());
+    rt.setRobotTrajectoryMsg(*group.getCurrentState(), trajectory_msg);
+    trajectory_processing::IterativeParabolicTimeParameterization iptp;
+    // iptp.computeTimeStamps(robot_trajectory, 0.5);
+    bool IptpSuccess = false;
+    IptpSuccess = iptp.computeTimeStamps(rt,trajectory_velocity_scaling_);
+    ROS_INFO("Computed time stamped %s", IptpSuccess ? "SUCCED" : "FAILED");
+    rt.getRobotTrajectoryMsg(trajectory_msg);
+    plan.trajectory_ = trajectory_msg;
+    ROS_INFO("Send goal to kinova");
+    // sleep(1.0);
+    confirmToAct();
+    group.execute(plan);
+    // sleep(1.0);
+    // ac.sendGoal(goal);
+    // ac.waitForResult(ros::Duration(10));
+    ROS_INFO_ONCE("\n\nMOVE TO TARGET SUCCESSFULLY\n\n");
+}
+
+
+void moveLineFromCurrentState_backup(double distanceX, double distanceY, double distanceZ,
+                              double yaw, double pitch, double roll)
+{   
+    yaw = (yaw / 180.0 * Pi);
+    pitch = (pitch / 180.0 * Pi);
+    roll = (roll / 180.0 * Pi);
+    int number_point = 20;
+    int number_distance = 5;
+    // double yaw_ = yaw;
+    // double pitch_ = pitch; 
+    // double roll_ = roll;
+    // Euler angle
+    Eigen::Vector3d target_euler_angle(yaw, pitch, roll);
+    Eigen::Matrix3d rotation_matrix;
+
+    // Euler to Rotation Matrix
+    // Eigen::AngleAxisd rollAngle(eulerAngle(2), Eigen::Vector3d::UnitX());
+    // Eigen::AngleAxisd pitchAngle(eulerAngle(1), Eigen::Vector3d::UnitY());
+    // Eigen::AngleAxisd yawAngle(eulerAngle(0), Eigen::Vector3d::UnitZ());
+    // rotation_matrix = yawAngle * pitchAngle * rollAngle;
+
+    moveit::planning_interface::MoveGroup group("arm");
+    moveit::planning_interface::MoveGroup::Plan plan;
+    group.setStartStateToCurrentState();
+    std::vector<double> joint_values = group.getCurrentJointValues();
+    cout << "Current pose: " << "\n" << group.getCurrentPose() << endl;
+    // cout << "Current RPY: " << "\n" << group.getCurrentRPY() << endl;
+    control_msgs::FollowJointTrajectoryGoal goal;
+    moveit_msgs::RobotTrajectory trajectory_msg;
+
+    // robot_trajectory::RobotTrajectory rt(model_loader.getModel(), "arm");
+    // moveit_msgs::RobotTrajectory trajectory;
+
+    // trajectory_processing::IterativeParabolicTimeParameterization iptp;
+    // iptp.computeTimeStamps(rt, trajectory_velocity_scaling_);
+    // rt.getRobotTrajectoryMsg(plan1.trajectory_);
+
+    Eigen::VectorXd qPre(6);
+    // qPre << 4.89, 3.29, 1.34, 4.19, 1.54, 1.30;
+    // qPre << joint_values[0], joint_values[1], joint_values[2], joint_values[3], joint_values[4],
+    qPre << current_joint_values[0], current_joint_values[1], 
+            current_joint_values[2], current_joint_values[3], 
+            current_joint_values[4], current_joint_values[5];
+    cout << "qPre: " << qPre << endl;
+    Parser parser;
+    Eigen::Matrix4d transformation = parser.Foward(qPre);
+    cout << "transformation1: " << "\n" << transformation << endl;
+    rotation_matrix << transformation(0,0), transformation(0,1), transformation(0,2),
+                       transformation(1,0), transformation(1,1), transformation(1,2),
+                       transformation(2,0), transformation(2,1), transformation(2,2);
+    // cout << "rotation matrix1: " << "\n" << rotation_matrix << endl;
+    Eigen::Vector3d current_euler_angle = rotation_matrix.eulerAngles(2,1,0);
+    cout << "Current Euler angle1: " << "\n" << (current_euler_angle.transpose() * 180.0 / Pi) << endl;
+    for(int i=0;i<3; i++) // TODO
+    {
+        if(current_euler_angle(i) < -Pi) current_euler_angle(i) += Pi;
+        if(current_euler_angle(i) >  Pi) current_euler_angle(i) -= Pi;
+        // if(current_euler_angle(i) >  (Pi / 2)) current_euler_angle(i) -= Pi;
+        // if(current_euler_angle(i) >  Pi) current_euler_angle(i) -= Pi;
+    }
+    cout << "Current Euler angle2: " << "\n" << (current_euler_angle.transpose() * 180.0 / Pi) << endl;
+
+    cout << "Target Euler angle2: " << "\n" << (target_euler_angle.transpose() * 180.0 / Pi) << endl;
+
+    goal.trajectory.header.frame_id = "j2n6s300_base";
+    goal.trajectory.header.stamp = ros::Time::now();
+    goal.trajectory.joint_names.clear();
+    trajectory_msg.joint_trajectory.header.frame_id = "j2n6s300_base";
+    trajectory_msg.joint_trajectory.header.stamp = ros::Time::now();
+    trajectory_msg.joint_trajectory.joint_names.clear();
+
+    for (int k = 0; k < 6; k++) 
+    {
+        stringstream jointName;
+        jointName << "j2n6s300_joint_" << (k + 1);
+        goal.trajectory.joint_names.push_back(jointName.str());
+        trajectory_msg.joint_trajectory.joint_names.push_back(jointName.str());
+    }
+
+    goal.trajectory.points.clear();
+    trajectory_msg.joint_trajectory.points.clear();
+
+    int number1 = number_point, number2 = number_distance;
+    target_euler_angle = current_euler_angle;
+    for (int i = 0; i < number1; i++) 
+    {
+        // translation
+        transformation(0, 3) += distanceX / number1;
+        transformation(1, 3) += distanceY / number1;
+        transformation(2, 3) += distanceZ / number1;
+        // rotation
+        target_euler_angle(0) += ((yaw - current_euler_angle(0)) / number1);
+        target_euler_angle(1) += ((pitch - current_euler_angle(1)) / number1);
+        target_euler_angle(2) += ((roll - current_euler_angle(2)) / number1);
+
+        // Euler to Rotation Matrix
+        Eigen::AngleAxisd rollAngle(target_euler_angle(2), Eigen::Vector3d::UnitX());
+        Eigen::AngleAxisd pitchAngle(target_euler_angle(1), Eigen::Vector3d::UnitY());
+        Eigen::AngleAxisd yawAngle(target_euler_angle(0), Eigen::Vector3d::UnitZ());
+        rotation_matrix = yawAngle * pitchAngle * rollAngle;
+        // cout << "rotation matrix2: " << "\n" << rotation_matrix << endl;
+        for(int i=0; i<3; i++)
+        {
+            for(int j=0; j<3; j++)
+            {
+                transformation(i,j) = rotation_matrix(i,j);
+            }
+        }
+        // transformation()
+        Eigen::VectorXd q(6);
+        q = parser.Inverse(transformation, qPre);
+        // cout << "=========" << endl;
+        if (q(0) > 10) continue;
+
+        // printf("loops:%d",i);
+        for (int j = 0; j < number2; j++) {
+            trajectory_msgs::JointTrajectoryPoint point;
+            for (int k = 0; k < 6; k++) {
+                point.positions.push_back(qPre(k) + (q(k) - qPre(k)) / number2 * j);
+                point.velocities.push_back(0.0); 
+                point.accelerations.push_back(0.0);
+            }
+            point.time_from_start = ros::Duration();
+            goal.trajectory.points.push_back(point);
+            trajectory_msg.joint_trajectory.points.push_back(point);
+        }
+        // printf("\n\njoint values : %d\n",i);
+        // std::cout << q  << "\n" << std::endl;
+        qPre = q;
+    }
+    cout << "trajectory points number: " << trajectory_msg.joint_trajectory.points.size() << endl;
+
+    double trajectory_velocity_scaling_ = 0.3;
+    robot_trajectory::RobotTrajectory rt(group.getCurrentState()->getRobotModel(), group.getName());
+    rt.setRobotTrajectoryMsg(*group.getCurrentState(), trajectory_msg);
+    trajectory_processing::IterativeParabolicTimeParameterization iptp;
+    // iptp.computeTimeStamps(robot_trajectory, 0.5);
+    bool IptpSuccess = false;
+    IptpSuccess = iptp.computeTimeStamps(rt,trajectory_velocity_scaling_);
+    ROS_INFO("Computed time stamped %s", IptpSuccess ? "SUCCED" : "FAILED");
+    rt.getRobotTrajectoryMsg(trajectory_msg);
+    plan.trajectory_ = trajectory_msg;
+    ROS_INFO("Send goal to kinova");
+    // sleep(1.0);
+    group.execute(plan);
+    // sleep(1.0);
+    // ac.sendGoal(goal);
+    // ac.waitForResult(ros::Duration(10));
+    ROS_INFO_ONCE("\n\nMOVE TO TARGET SUCCESSFULLY\n\n");
+}
+
+void moveLineFromCurrentState111(double distanceX, double distanceY, double distanceZ,
+                              double yaw, double pitch, double roll)
+{   
+    yaw = (yaw / 180.0 * Pi);
+    pitch = (pitch / 180.0 * Pi);
+    roll = (roll / 180.0 * Pi);
+    int number_point = 20;
+    int number_distance = 5;
+    // double yaw_ = yaw;
+    // double pitch_ = pitch; 
+    // double roll_ = roll;
+    // Euler angle
+    Eigen::Vector3d target_euler_angle(yaw, pitch, roll);
+    Eigen::Matrix3d rotation_matrix;
+    tf::Matrix3x3 rotation_matrix_tf;
+    tf::Quaternion q_tf;
+    // Euler to Rotation Matrix
+    // Eigen::AngleAxisd rollAngle(eulerAngle(2), Eigen::Vector3d::UnitX());
+    // Eigen::AngleAxisd pitchAngle(eulerAngle(1), Eigen::Vector3d::UnitY());
+    // Eigen::AngleAxisd yawAngle(eulerAngle(0), Eigen::Vector3d::UnitZ());
+    // rotation_matrix = yawAngle * pitchAngle * rollAngle;
+
+    moveit::planning_interface::MoveGroup group("arm");
+    moveit::planning_interface::MoveGroup::Plan plan;
+    group.setStartStateToCurrentState();
+    std::vector<double> joint_values = group.getCurrentJointValues();
+    cout << "Current pose: " << "\n" << group.getCurrentPose() << endl;
+    // cout << "Current RPY: " << "\n" << group.getCurrentRPY() << endl;
+    control_msgs::FollowJointTrajectoryGoal goal;
+    moveit_msgs::RobotTrajectory trajectory_msg;
+
+    // robot_trajectory::RobotTrajectory rt(model_loader.getModel(), "arm");
+    // moveit_msgs::RobotTrajectory trajectory;
+
+    // trajectory_processing::IterativeParabolicTimeParameterization iptp;
+    // iptp.computeTimeStamps(rt, trajectory_velocity_scaling_);
+    // rt.getRobotTrajectoryMsg(plan1.trajectory_);
+
+    Eigen::VectorXd qPre(6);
+    // qPre << 4.89, 3.29, 1.34, 4.19, 1.54, 1.30;
+    // qPre << joint_values[0], joint_values[1], joint_values[2], joint_values[3], joint_values[4],
+    qPre << current_joint_values[0], current_joint_values[1], 
+            current_joint_values[2], current_joint_values[3], 
+            current_joint_values[4], current_joint_values[5];
+    cout << "qPre: " << qPre << endl;
+    Parser parser;
+    Eigen::Matrix4d transformation = parser.Foward(qPre);
+    cout << "transformation1: " << "\n" << transformation << endl;
+    rotation_matrix << transformation(0,0), transformation(0,1), transformation(0,2),
+                       transformation(1,0), transformation(1,1), transformation(1,2),
+                       transformation(2,0), transformation(2,1), transformation(2,2);
+    // tf_rotation_matrix.setVale(transformation(0,0), transformation(0,1), transformation(0,2),
+    //                 transformation(1,0), transformation(1,1), transformation(1,2),
+    //                 transformation(2,0), transformation(2,1), transformation(2,2));
+    cout << "eigen rotation maytix:" << "\n" << rotation_matrix << endl;
+    Eigen::Quaterniond eigen_quat(rotation_matrix);
+    Eigen::Quaterniond q1 = eigen_quat * eigen_quat;
+    Eigen::Quaterniond q2 = eigen_quat;
+    q2 = q1.slerp(0.1, eigen_quat);
+    cout << "eigen Quaterniond1:" << "\n" << eigen_quat.x() << " " << eigen_quat.y() << " " << eigen_quat.z() << " " << eigen_quat.w() << endl;
+    cout << "eigen Quaterniond2:" << "\n" << q1.x() << " " << q1.y() << " " << q1.z() << " " << q1.w() << endl;    
+    cout << "eigen Quaterniond3:" << "\n" << q2.x() << " " << q2.y() << " " << q2.z() << " " << q2.w() << endl;   
+    tf::Quaternion current_tf_quat(eigen_quat.x(), eigen_quat.y(), eigen_quat.z(), eigen_quat.w());
+    cout << "tf::Quaternion:" << "\n" << current_tf_quat.x() << " " << current_tf_quat.y() << " " << current_tf_quat.z() << " " << current_tf_quat.w() << endl;
+    // cout << current_tf_quat.get
+    // the tf::Quaternion has a method to acess roll pitch and yaw
+    double R, P, Y;
+    tf::Matrix3x3 tf_rotation_matrix(current_tf_quat);
+    tf_rotation_matrix.getRPY(R, P, Y);
+    // cout << "tf::Matrix3x3:" << endl;
+    // // cout << tf_rotation_matrix << endl;
+    // for(int i=0; i<3;i++)
+    // {
+    //     cout << endl;
+    //     for(int j=0; j<3;j++)
+    //     {
+    //         cout << tf_rotation_matrix(i,j) << " ";
+    //     }
+    //     cout << endl;
+    // }
+
+    cout << "tf: Euler angle RPY: " << "\n" << R * 180 / Pi << " " << P * 180 / Pi << " " << Y * 180 / Pi << endl;
+    // rotation_matrix_tf(0,0,0,
+    //                    1,0,0,
+    //                    0,0,1);
+    // rotation_matrix_tf(transformation(0,0), transformation(0,1), transformation(0,2),
+    //                    transformation(1,0), transformation(1,1), transformation(1,2),
+    //                    transformation(2,0), transformation(2,1), transformation(2,2));
+    // tf::matrixEigenToTF(rotation_matrix, rotation_matrix_tf);
+    // cout << "rotation matrix1: " << "\n" << rotation_matrix << endl;
+    Eigen::Vector3d current_euler_angle = rotation_matrix.eulerAngles(2,1,0);
+    tf::Vector3 current_euler_angle_tf(R, P, Y);
+    tf::Quaternion target_quat_tf;
+    target_quat_tf.setRPY(R+0.5, P, Y);
+    cout << "tf::Quaternion:" << "\n" << current_tf_quat.x() << " " << current_tf_quat.y() << " " << current_tf_quat.z() << " " << current_tf_quat.w() << endl;
+    cout << "tf::Quaternion:" << "\n" << target_quat_tf.x() << " " << target_quat_tf.y() << " " << target_quat_tf.z() << " " << target_quat_tf.w() << endl;
+    current_tf_quat = current_tf_quat.slerp(target_quat_tf, 0.5);
+    cout << "tf::Quaternion:" << "\n" << current_tf_quat.x() << " " << current_tf_quat.y() << " " << current_tf_quat.z() << " " << current_tf_quat.w() << endl;
+    cout << "tf::Quaternion:" << "\n" << target_quat_tf.x() << " " << target_quat_tf.y() << " " << target_quat_tf.z() << " " << target_quat_tf.w() << endl;
+    // cout << "Current Euler angle1 (from Eigen): " << "\n" << (current_euler_angle.transpose() * 180.0 / Pi) << endl;
+
+    // cout << "Target Euler angle2: " << "\n" << (target_euler_angle.transpose() * 180.0 / Pi) << endl;
+
+    goal.trajectory.header.frame_id = "j2n6s300_base";
+    goal.trajectory.header.stamp = ros::Time::now();
+    goal.trajectory.joint_names.clear();
+    trajectory_msg.joint_trajectory.header.frame_id = "j2n6s300_base";
+    trajectory_msg.joint_trajectory.header.stamp = ros::Time::now();
+    trajectory_msg.joint_trajectory.joint_names.clear();
+
+    for (int k = 0; k < 6; k++) 
+    {
+        stringstream jointName;
+        jointName << "j2n6s300_joint_" << (k + 1);
+        goal.trajectory.joint_names.push_back(jointName.str());
+        trajectory_msg.joint_trajectory.joint_names.push_back(jointName.str());
+    }
+
+    goal.trajectory.points.clear();
+    trajectory_msg.joint_trajectory.points.clear();
+
+    int number1 = number_point, number2 = number_distance;
+    target_euler_angle = current_euler_angle;
+    for (int i = 0; i < number1; i++) 
+    {
+        // translation
+        transformation(0, 3) += distanceX / number1;
+        transformation(1, 3) += distanceY / number1;
+        transformation(2, 3) += distanceZ / number1;
+        // rotation
+        target_euler_angle(0) += ((yaw - current_euler_angle(0)) / number1);
+        target_euler_angle(1) += ((pitch - current_euler_angle(1)) / number1);
+        target_euler_angle(2) += ((roll - current_euler_angle(2)) / number1);
+        current_tf_quat = current_tf_quat.slerp(target_quat_tf, 0.1);
+        tf::Matrix3x3 tf_rotation_matrix1(current_tf_quat);
+        tf_rotation_matrix1.getRPY(R, P, Y);
+        cout << "tf: Euler angle RPY 2: " << "\n" << R * 180 / Pi << " " << P * 180 / Pi << " " << Y * 180 / Pi << endl;
+
+        Eigen::Quaterniond eigen_target_q(current_tf_quat.w(), current_tf_quat.x(), current_tf_quat.y(), current_tf_quat.z());
+        rotation_matrix = eigen_target_q.toRotationMatrix();
+        
+        // Euler to Rotation Matrix
+        // Eigen::AngleAxisd rollAngle(target_euler_angle(2), Eigen::Vector3d::UnitX());
+        // Eigen::AngleAxisd pitchAngle(target_euler_angle(1), Eigen::Vector3d::UnitY());
+        // Eigen::AngleAxisd yawAngle(target_euler_angle(0), Eigen::Vector3d::UnitZ());
+        // rotation_matrix = yawAngle * pitchAngle * rollAngle;
+        // cout << "rotation matrix2: " << "\n" << rotation_matrix << endl;
+        for(int i=0; i<3; i++)
+        {
+            for(int j=0; j<3; j++)
+            {
+                transformation(i,j) = rotation_matrix(i,j);
+            }
+        }
+        // transformation()
+        Eigen::VectorXd q(6);
+        q = parser.Inverse(transformation, qPre);
+        // cout << "=========" << endl;
+        if (q(0) > 10) continue;
+
+        // printf("loops:%d",i);
+        for (int j = 0; j < number2; j++) {
+            trajectory_msgs::JointTrajectoryPoint point;
+            for (int k = 0; k < 6; k++) {
+                point.positions.push_back(qPre(k) + (q(k) - qPre(k)) / number2 * j);
+                point.velocities.push_back(0.0); 
+                point.accelerations.push_back(0.0);
+            }
+            point.time_from_start = ros::Duration();
+            goal.trajectory.points.push_back(point);
+            trajectory_msg.joint_trajectory.points.push_back(point);
+        }
+        // printf("\n\njoint values : %d\n",i);
+        // std::cout << q  << "\n" << std::endl;
+        qPre = q;
+    }
+    cout << "trajectory points number: " << trajectory_msg.joint_trajectory.points.size() << endl;
+
+    double trajectory_velocity_scaling_ = 0.3;
+    robot_trajectory::RobotTrajectory rt(group.getCurrentState()->getRobotModel(), group.getName());
+    rt.setRobotTrajectoryMsg(*group.getCurrentState(), trajectory_msg);
+    trajectory_processing::IterativeParabolicTimeParameterization iptp;
+    // iptp.computeTimeStamps(robot_trajectory, 0.5);
+    bool IptpSuccess = false;
+    IptpSuccess = iptp.computeTimeStamps(rt,trajectory_velocity_scaling_);
+    ROS_INFO("Computed time stamped %s", IptpSuccess ? "SUCCED" : "FAILED");
+    rt.getRobotTrajectoryMsg(trajectory_msg);
+    plan.trajectory_ = trajectory_msg;
+    ROS_INFO("Send goal to kinova");
+    // sleep(1.0);
+    confirmToAct();
+    group.execute(plan);
+    // sleep(1.0);
+    // ac.sendGoal(goal);
+    // ac.waitForResult(ros::Duration(10));
+    ROS_INFO_ONCE("\n\nMOVE TO TARGET SUCCESSFULLY\n\n");
 }

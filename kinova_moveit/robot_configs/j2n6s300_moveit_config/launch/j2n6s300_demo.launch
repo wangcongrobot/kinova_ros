@@ -50,4 +50,11 @@
     <arg name="moveit_warehouse_database_path" value="$(arg db_path)"/>
   </include>	
 
+    <!-- wangcong added -->
+    <!-- We do not have a robot connected, so publish fake joint states -->
+  <node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher">
+    <param name="/use_gui" value="true"/>
+    <rosparam param="/source_list">[/j2n6s300_driver/out/joint_state]</rosparam>
+  </node>
+
 </launch>
