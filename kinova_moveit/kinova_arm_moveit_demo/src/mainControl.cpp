@@ -1021,7 +1021,7 @@ void moveLineTarget(const geometry_msgs::Pose& start, const geometry_msgs::Pose&
     group.setGoalOrientationTolerance(0.01); // 5.729576129 * 2 deg
     group.setMaxVelocityScalingFactor(0.5);
     moveit_msgs::RobotTrajectory trajectory;
-    const double jump_threshold = 0.0;
+    const double jump_threshold = 0.05;
     const double eef_step = 0.01;
     double fraction = group.computeCartesianPath(waypoints, eef_step, jump_threshold, trajectory);
 

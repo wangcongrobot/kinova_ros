@@ -10,13 +10,13 @@
 #include <vector>
 
 // custom headers
-#include "darknet_ros_msgs/TargetPoint.h" // kinect info
-#include "darknet_ros_msgs/TargetPoints.h"
+
+#include "functions.h"
 #include "id_data_msgs/ID_Data.h" //using for notie event
 #include <add_scene_objects.h>    // handle scene obstacles
-#include <pick_place.h>
+#include <jrc18sia_motion_planner.h>
 
-#define PREGRASP_OFFSET 0.2
+#define PRESWEEP_OFFSET 0.2
 #define POSITION_TOLERANCE 0.04
 #define ORIENTATION_TOLERANCE 0.1
 #define MAX_PARALLEL_ATTEMPTS 10
@@ -58,7 +58,7 @@ geometry_msgs::Pose home_pose_mid;
 geometry_msgs::Pose home_pose_high;
 geometry_msgs::Pose home_pose;
 geometry_msgs::Pose scan_pose; // move to rest task
-geometry_msgs::Pose box_pose;     // box pose to place object
+geometry_msgs::Pose box_pose;  // box pose to place object
 
 // Pose used by Alvin
 geometry_msgs::Pose sweep_pose; // Plan target from kinect --global variable
@@ -68,9 +68,6 @@ geometry_msgs::Pose suck_pose; // For suck task
 geometry_msgs::Pose presuck_pose;
 
 geometry_msgs::Pose current_pose; // used to indicate arm state
-geometry_msgs::Pose box_pose;     // box pose to place object
-
-
 
 /***************************NOTICE CLASS****************************/
 class notice_pub_sub {
@@ -185,14 +182,6 @@ void notice_pub_sub::notice_msgCallback(const id_data_msgs::ID_Data::ConstPtr& n
     {
         arm_stop_sweep_flag = true;
     }
-    if (notice_message.id == 4 && notice_message.data[0] == 2) // main loop keep arm to fetch flag
-    {
-        arm_keep_fetch_flag = true;
-    }
-    if (notice_message.id == 4 && notice_message.data[0] == 3) // main loop let arm release joy flag
-    {
-        arm_release_obj_flag = true;
-    }
 }
 
 void notice_pub_sub::notice_sub_spinner(char set)
@@ -201,15 +190,19 @@ void notice_pub_sub::notice_sub_spinner(char set)
     if (set == 0) notice_spinner->stop();
 }
 
+ErrorCode hand_MsgConform_ActFinishedWait(id_data_msgs::ID_Data* notice_data_test,
+    bool* msg_rec_flag, bool* finished_flag, notice_pub_sub* notice_test, string task);
+
 /********************************* MAIN PROGRAM ****************************/
 int main(int argc, char** argv)
 {
     ros::init(argc, argv, "jaco_moveit_control_main");
     ros::NodeHandle nh;
-    kinova::PickPlace pick_place(nh);
 
     ros::AsyncSpinner spinner(2);
     spinner.start();
+
+    JRCMotionPlanner motion_planner(nh);
 
     notice_pub_sub notice_test; // initial a notice class
     int loop_hz = 100;
@@ -235,7 +228,6 @@ int main(int argc, char** argv)
         loop_cnt++;
         if (loop_cnt % 100 == 0) {
             ROS_INFO("Begin main loop, ready to receive command from ge_test");
-            // ROS_INFO_STREAM("arm_start_fetch flag: " << arm_start_sweep_flag);
         }
 
         if (arm_start_sweep_flag) {
@@ -311,7 +303,7 @@ int main(int argc, char** argv)
 
             // sweep start
             presweep_pose = sweep_pose; // sweep pose is the target pose from kinect
-            presweep_pose.position.y += PREGRASP_OFFSET;
+            presweep_pose.position.y += PRESWEEP_OFFSET;
             presweep_pose.position.z += 0.1;
             // ROS_INFO_STREAM("pregrasp pose: " << presweep_pose);
 
@@ -325,11 +317,11 @@ int main(int argc, char** argv)
             if (DEBUG) {
                 start = presweep_pose; // virtual pose
             } else {
-                start = pick_place.get_ee_pose(); // real pose from driver info.
+                start = motion_planner.getCurrentPoseFromDriver(); // real pose from driver info.
                 start.orientation = presweep_pose.orientation;
             }
             geometry_msgs::Pose goal = sweep_pose;
-            goal.position.y -= PREGRASP_OFFSET;
+            goal.position.y -= PRESWEEP_OFFSET;
             pose_name = "FORWARD";
             confirmToAct(start, goal, pose_name);
             moveLineTarget(start, goal);
@@ -340,7 +332,7 @@ int main(int argc, char** argv)
                 start = presweep_pose; // virtual pose
                 start.position.z += 0.1;
             } else {
-                start = pick_place.get_ee_pose(); // real pose from driver info.
+                start = motion_planner.getCurrentPoseFromDriver(); // real pose from driver info.
                 start.orientation = presweep_pose.orientation;
             }
             geometry_msgs::Pose goal = sweep_pose;
@@ -352,7 +344,7 @@ int main(int argc, char** argv)
             if (DEBUG) {
                 start = sweep_pose;
             } else {
-                start = pick_place.get_ee_pose();
+                start = motion_planner.getCurrentPoseFromDriver();
                 start.orientation = presweep_pose.orientation;
             }
 
@@ -367,7 +359,7 @@ int main(int argc, char** argv)
                 start = sweep_pose;
                 start.position.y = SHELF_EDGE_Y;
             } else {
-                start = pick_place.get_ee_pose();
+                start = motion_planner.getCurrentPoseFromDriver();
                 start.orientation = presweep_pose.orientation;
             }
             pose_name = "HOME POSE";
@@ -386,8 +378,8 @@ int main(int argc, char** argv)
         if (arm_start_suck_flag) {
             // suck mode
             presuck_pose = suck_pose;
-            presuck_pose.position.z += PREGRASP_OFFSET;
-            presuck_pose.position.y += PREGRASP_OFFSET;
+            presuck_pose.position.z += PRESWEEP_OFFSET;
+            presuck_pose.position.y += PRESWEEP_OFFSET;
 
             // 1. presuck
             pose_name = "PRESUCK POSE";
@@ -399,11 +391,11 @@ int main(int argc, char** argv)
             if (DEBUG) {
                 start = presuck_pose;
             } else {
-                start = pick_place.get_ee_pose();
+                start = motion_planner.getCurrentPoseFromDriver();
                 start.orientation = presuck_pose.orientation;
             }
             geometry_msgs::Pose goal = presuck_pose;
-            goal.position.y -= PREGRASP_OFFSET;
+            goal.position.y -= PRESWEEP_OFFSET;
             pose_name = "SUCK FORWARD";
             confirmToAct(start, goal, pose_name);
             moveLineTarget(start, goal); // forward
@@ -412,7 +404,7 @@ int main(int argc, char** argv)
             if (DEBUG) {
                 start = goal;
             } else {
-                geometry_msgs::Pose start = pick_place.get_ee_pose();
+                geometry_msgs::Pose start = motion_planner.getCurrentPoseFromDriver();
                 start.orientation = presuck_pose.orientation;
             }
             goal = suck_pose;
@@ -466,22 +458,22 @@ int main(int argc, char** argv)
             if (DEBUG) {
                 start = presuck_pose;
             } else {
-                start = pick_place.get_ee_pose();
+                start = motion_planner.getCurrentPoseFromDriver();
                 start.orientation = presuck_pose.orientation;
             }
             goal = suck_pose;
-            goal.position.z += PREGRASP_OFFSET;
+            goal.position.z += PRESWEEP_OFFSET;
             pose_name = "SUCK UP ";
             confirmToAct(start, goal, pose_name);
             moveLineTarget(start, goal); // up
 
-            6. move to box(above) if (DEBUG)
+            // 6. move to box(above) if (DEBUG)
             {
                 start = goal; // last goal
             }
             else
             {
-                start = pick_place.get_ee_pose();
+                start = motion_planner.getCurrentPoseFromDriver();
                 start.orientation = presuck_pose.orientation;
             }
             goal = presuck_pose;
@@ -509,4 +501,60 @@ int main(int argc, char** argv)
     }
     ros::shutdown();
     return 0;
+}
+
+/********************* functions ******************************/
+ErrorCode hand_MsgConform_ActFinishedWait(id_data_msgs::ID_Data* notice_data_test,
+    bool* msg_rec_flag, bool* finished_flag, notice_pub_sub* notice_test, string task)
+{
+    id_data_msgs::ID_Data notice_data;
+    int loop_hz = 10;
+    ros::Rate loop_rate(loop_hz);
+
+    notice_data_clear(&notice_data);
+    notice_data.id = notice_data_test->id;
+    for (int i = 0; i < 8; i++) notice_data.data[i] = notice_data_test->data[i];
+    notice_test->notice_pub_sub_pulisher(notice_data);
+
+    // hand data receive judge
+    int wait_count = 0;
+    while (ros::ok()) {
+        if (*msg_rec_flag == true) {
+            *msg_rec_flag = false;
+            wait_count = 0; // reset time for next loop
+            break;
+        }
+
+        wait_count++;
+        if (wait_count % 20 == 0) // send msg again after waiting 1s
+        {
+            ROS_ERROR("Hand didn't receive msg, retrying...");
+            notice_test->notice_pub_sub_pulisher(notice_data);
+        }
+
+        if (wait_count >= 2000) {
+            error_no = notice_data.id;
+            goto next;
+        }
+        notice_test->notice_sub_spinner(1);
+        loop_rate.sleep();
+    }
+    // hand action finish judge
+    while (ros::ok()) {
+        if (*finished_flag == true) {
+            *finished_flag = false;
+            break;
+        }
+        wait_count++;
+        if (wait_count % 20 == 0) // send msg again after waiting 1s
+        {
+            if (task == "FETCH") ROS_INFO("Waiting for hand to grasp/suck...");
+            if (task == "RELEASE") ROS_INFO("Waiting for hand to open/release...");
+            if (task == "SWITCH") ROS_INFO("Waiting for hand to switch mode...");
+        }
+        notice_test->notice_sub_spinner(1);
+        loop_rate.sleep();
+    }
+next:
+    return error_no;
 }

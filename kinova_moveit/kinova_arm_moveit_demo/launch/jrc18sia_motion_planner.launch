@@ -1,0 +1,7 @@
+<launch>
+    <rosparam file="$(find jrc18sia_motion_planner)/config/jrc18sia_motion_planner_parameters.yaml" command="load" />
+
+  <node name="kinova_motion_planner" pkg="jrc18sia_motion_planner" type="kinova_motion_planner" output="screen" />
+
+
+</launch>
