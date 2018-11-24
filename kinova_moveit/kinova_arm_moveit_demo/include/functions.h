@@ -83,5 +83,8 @@ void moveLineFromCurrentState(double distanceX, double distanceY, double distanc
                               double roll, double pitch, double yaw,
                               int number_point, int number_distance);
 
+void moveLineFromCurrentState(double distanceX, double distanceY, double distanceZ,
+                              int number_point, int number_distance);
+
 
 #endif // FUNCTIONS_H

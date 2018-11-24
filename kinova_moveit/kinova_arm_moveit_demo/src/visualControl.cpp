@@ -940,7 +940,7 @@ void moveLineFromCurrentState(double distanceX, double distanceY, double distanc
     }
     cout << "trajectory points number: " << trajectory_msg.joint_trajectory.points.size() << endl;
 
-    double trajectory_velocity_scaling_ = 0.3;
+    double trajectory_velocity_scaling_ = 1.0;
     robot_trajectory::RobotTrajectory rt(group.getCurrentState()->getRobotModel(), group.getName());
     rt.setRobotTrajectoryMsg(*group.getCurrentState(), trajectory_msg);
     trajectory_processing::IterativeParabolicTimeParameterization iptp;

@@ -51,8 +51,8 @@
 #define ORIENTATION_TOLERANCE 0.1
 #define MAX_PARALLEL_ATTEMPTS 10
 #define DEBUG false
-
-
+#define CONFIRM_ACT false
+#define MAX_PLAN_STEPS 25
 
 // globals
 extern int error_no;
@@ -116,19 +116,35 @@ extern bool use_gripper_flag;       // alvin, grasp or suck depend on target
 // geometry_msgs::Pose pregrasp_mid_test;
 
 // Pose used by Alvin
-extern geometry_msgs::Pose grasp_pose; // Plan target from kinect --global variable
+// Grasp
 extern geometry_msgs::Pose pregrasp_pose;
+extern geometry_msgs::Pose grasp_pose; // Plan target from kinect --global variable
+extern geometry_msgs::Pose postgrasp_pose;
 extern geometry_msgs::Pose gripper_rest_pose;  // pre-defined, pose after object is grasped
 extern geometry_msgs::Pose gripper_place_pose; // pre-defined
 
-extern geometry_msgs::Pose suck_pose; //
+// Suck
 extern geometry_msgs::Pose presuck_pose;
+extern geometry_msgs::Pose suck_pose; //
+extern geometry_msgs::Pose postsuck_pose;
 extern geometry_msgs::Pose sucker_place_pose; // pre-defined
 extern geometry_msgs::Pose sucker_rest_pose;  // pre-defined, pose after object is grasped
 
-extern geometry_msgs::Pose current_pose; // used to indicate arm state
-extern std::string hand_current_mode;
 
+// Move
+extern geometry_msgs::Pose premove_pose;
+extern geometry_msgs::Pose move_pose; //
+extern geometry_msgs::Pose postmove_pose;
+
+extern geometry_msgs::Pose test_pose;
+
+
+extern geometry_msgs::Pose current_pose; // used to indicate arm state
+
+
+extern std::string hand_current_mode;
 extern std::vector<double> current_joint_values;
+
+
 
 #endif

@@ -134,7 +134,8 @@ add_executable(mainControl-wangcong
               src/pick_place.cpp
               src/functions.cpp
               src/globals.cpp
-              src/notice_pub_sub.cpp)
+              src/notice_pub_sub.cpp
+              src/jrc18sia_motion_planner.cpp)
 target_link_libraries(mainControl-wangcong 
                       add_scene_objects 
                       parser 

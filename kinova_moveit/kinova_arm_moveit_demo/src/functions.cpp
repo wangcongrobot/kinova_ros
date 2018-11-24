@@ -135,7 +135,7 @@ void moveToTarget1(const geometry_msgs::Pose& target)
         success = group.plan(my_plan);
         if (success) {
             plan_steps = evaluateMoveitPlan(my_plan);
-            if (plan_steps < 25) {
+            if (plan_steps < MAX_PLAN_STEPS) {
                 ROS_INFO_STREAM("Try " << i << ": plan found in " << my_plan.planning_time_
                                        << " seconds with " << plan_steps << " steps");
                 plan_valid = true;
@@ -152,14 +152,20 @@ void moveToTarget1(const geometry_msgs::Pose& target)
     }
 
     // Execute the plan
+    // ROS_INFO("Print n to execute the plan");
+    // string pause_;
+    // cin >> pause_;
+    // if (pause_ == "n") {
+    //     ros::Time start = ros::Time::now();
+    //     group.execute(my_plan);
+    //     ROS_INFO_STREAM("Motion duration: " << (ros::Time::now() - start).toSec());
+    // }
     ROS_INFO("Print n to execute the plan");
-    string pause_;
-    cin >> pause_;
-    if (pause_ == "n") {
-        ros::Time start = ros::Time::now();
-        group.execute(my_plan);
-        ROS_INFO_STREAM("Motion duration: " << (ros::Time::now() - start).toSec());
-    }
+    confirmToAct();
+
+    ros::Time start = ros::Time::now();
+    group.execute(my_plan);
+    ROS_INFO_STREAM("Motion duration: " << (ros::Time::now() - start).toSec());
 }
 
 int evaluateMoveitPlan(moveit::planning_interface::MoveGroup::Plan& plan)
@@ -210,7 +216,7 @@ void moveToTarget(const geometry_msgs::Pose& target)
         }
     }
     plan_steps = evaluateMoveitPlan(plan);
-    if (plan_steps < 25) {
+    if (plan_steps < MAX_PLAN_STEPS) {
         ROS_INFO_STREAM("plan found in " << plan.planning_time_
                                 << " seconds with " << plan_steps << " steps");
         plan_valid = true;
@@ -222,14 +228,20 @@ void moveToTarget(const geometry_msgs::Pose& target)
     }
 
     // Execute the plan
+    // ROS_INFO("Print n to execute the plan");
+    // string pause_;
+    // cin >> pause_;
+    // if (pause_ == "n") {
+    //     ros::Time start = ros::Time::now();
+    //     group.execute(my_plan);
+    //     ROS_INFO_STREAM("Motion duration: " << (ros::Time::now() - start).toSec());
+    // }
     ROS_INFO("Print n to execute the plan");
-    string pause_;
-    cin >> pause_;
-    if (pause_ == "n") {
-        ros::Time start = ros::Time::now();
-        group.execute(plan);
-        ROS_INFO_STREAM("Motion duration: " << (ros::Time::now() - start).toSec());
-    }
+    confirmToAct();
+
+    ros::Time start = ros::Time::now();
+    group.execute(plan);
+    ROS_INFO_STREAM("Motion duration: " << (ros::Time::now() - start).toSec());
 }
 // Plan with pre-defined postures
 void moveToTarget(const std::string& target_name)
@@ -302,7 +314,7 @@ void moveLineTarget(const geometry_msgs::Pose& start, const geometry_msgs::Pose&
 
     int plan_steps = evaluateMoveitPlan(cartesian_plan);
     ROS_INFO_STREAM("Line plan steps: " << plan_steps);
-    if (plan_steps < 30) {
+    if (plan_steps < MAX_PLAN_STEPS) {
         ROS_INFO_STREAM("Plan found in " << cartesian_plan.planning_time_ << " seconds with "
                                          << plan_steps << " steps");
         group.execute(cartesian_plan);
@@ -320,13 +332,17 @@ void confirmToAct(
     ROS_INFO_STREAM("Move from: " << start << "to " << goal);
     ROS_INFO_STREAM("Confirm start ---> goal info, press n to start plan");
 
-    string pause_;
-    cin >> pause_;
-    if ("n" == pause_) {
-        ROS_INFO_STREAM("Corrent state, begin to plan");
-    } else {
-        return;
+    if(CONFIRM_ACT)
+    {
+        string pause_;
+        cin >> pause_;
+        if ("n" == pause_) {
+            ROS_INFO_STREAM("Corrent state, begin to plan");
+        } else {
+            return;
+        }
     }
+
 }
 
 void confirmToAct(const geometry_msgs::Pose& goal, const string& str = "NULL")
@@ -336,13 +352,17 @@ void confirmToAct(const geometry_msgs::Pose& goal, const string& str = "NULL")
          << "\n";
     ROS_INFO_STREAM("Move to target" << goal);
     ROS_INFO_STREAM("Confirm start ---> goal info, press n to start plan");
-    string pause_;
-    cin >> pause_;
-    if ("n" == pause_) {
-        ROS_INFO_STREAM("Correct state, begin to plan");
-    } else {
-        return;
+    if(CONFIRM_ACT)
+    {
+        string pause_;
+        cin >> pause_;
+        if ("n" == pause_) {
+            ROS_INFO_STREAM("Correct state, begin to plan");
+        } else {
+            return;
+        }
     }
+
 }
 
 void handleCollisionObj(build_workScene& buildWorkScene)
@@ -414,13 +434,17 @@ void error_deal(int error_nu)
 void confirmToAct()
 {
     ROS_INFO_STREAM("Confirm start and end info and press n to start plan");
-    string pause_;
-    cin >> pause_;
-    if ("n" == pause_) {
-        ROS_INFO_STREAM("Valid info, begin to plan");
-    } else {
-        return;
+    if(CONFIRM_ACT)
+    {
+        string pause_;
+        cin >> pause_;
+        if ("n" == pause_) {
+            ROS_INFO_STREAM("Valid info, begin to plan");
+        } else {
+            return;
+        }
     }
+
 }
 
 
@@ -460,8 +484,8 @@ void moveLineFromCurrentState(double distanceX, double distanceY, double distanc
     Eigen::VectorXd qPre(6);
     // qPre << 4.89, 3.29, 1.34, 4.19, 1.54, 1.30;
     // qPre << joint_values[0], joint_values[1], joint_values[2], joint_values[3], joint_values[4],
-    qPre << current_joint_values[0], current_joint_values[1], 
-            current_joint_values[2], current_joint_values[3], 
+    qPre << current_joint_values[0], current_joint_values[1],
+            current_joint_values[2], current_joint_values[3],
             current_joint_values[4], current_joint_values[5];
     cout << "qPre: " << qPre << endl;
     Parser parser;
@@ -549,6 +573,106 @@ void moveLineFromCurrentState(double distanceX, double distanceY, double distanc
         qPre = q;
     }
     cout << "trajectory points number: " << trajectory_msg.joint_trajectory.points.size() << endl;
+    Eigen::Matrix4d transformation2 = parser.Foward(qPre);
+    cout << "transformation2: " << "\n" << transformation2 << endl;
+
+    double trajectory_velocity_scaling_ = 0.3;
+    robot_trajectory::RobotTrajectory rt(group.getCurrentState()->getRobotModel(), group.getName());
+    rt.setRobotTrajectoryMsg(*group.getCurrentState(), trajectory_msg);
+    trajectory_processing::IterativeParabolicTimeParameterization iptp;
+    // iptp.computeTimeStamps(robot_trajectory, 0.5);
+    bool IptpSuccess = false;
+    IptpSuccess = iptp.computeTimeStamps(rt,trajectory_velocity_scaling_);
+    ROS_INFO("Computed time stamped %s", IptpSuccess ? "SUCCED" : "FAILED");
+    rt.getRobotTrajectoryMsg(trajectory_msg);
+    plan.trajectory_ = trajectory_msg;
+    ROS_INFO("Send goal to kinova");
+    // sleep(1.0);
+    confirmToAct();
+    group.execute(plan);
+    // sleep(1.0);
+    // ac.sendGoal(goal);
+    // ac.waitForResult(ros::Duration(10));
+    ROS_INFO_ONCE("\n\nMOVE TO TARGET SUCCESSFULLY\n\n");
+}
+
+
+void moveLineFromCurrentState(double distanceX, double distanceY, double distanceZ,
+                              int number_point, int number_distance)
+{   
+    // MoveIt!
+    moveit::planning_interface::MoveGroup group("arm");
+    moveit::planning_interface::MoveGroup::Plan plan;
+    group.setStartStateToCurrentState();
+    std::vector<double> joint_values = group.getCurrentJointValues();
+    cout << "Current pose: " << "\n" << group.getCurrentPose() << endl;
+    // cout << "Current RPY: " << "\n" << group.getCurrentRPY() << endl;
+    control_msgs::FollowJointTrajectoryGoal goal;
+    moveit_msgs::RobotTrajectory trajectory_msg;
+    
+    Eigen::VectorXd qPre(6);
+    // qPre << 4.89, 3.29, 1.34, 4.19, 1.54, 1.30;
+    // qPre << joint_values[0], joint_values[1], joint_values[2], joint_values[3], joint_values[4],
+    qPre << current_joint_values[0], current_joint_values[1],
+            current_joint_values[2], current_joint_values[3],
+            current_joint_values[4], current_joint_values[5];
+    cout << "qPre: " << qPre << endl;
+    Parser parser;
+    Eigen::Matrix4d transformation = parser.Foward(qPre);
+    cout << "transformation1: " << "\n" << transformation << endl;
+
+    goal.trajectory.header.frame_id = "j2n6s300_base";
+    goal.trajectory.header.stamp = ros::Time::now();
+    goal.trajectory.joint_names.clear();
+    trajectory_msg.joint_trajectory.header.frame_id = "j2n6s300_base";
+    trajectory_msg.joint_trajectory.header.stamp = ros::Time::now();
+    trajectory_msg.joint_trajectory.joint_names.clear();
+
+    for (int k = 0; k < 6; k++) 
+    {
+        stringstream jointName;
+        jointName << "j2n6s300_joint_" << (k + 1);
+        goal.trajectory.joint_names.push_back(jointName.str());
+        trajectory_msg.joint_trajectory.joint_names.push_back(jointName.str());
+    }
+
+    goal.trajectory.points.clear();
+    trajectory_msg.joint_trajectory.points.clear();
+
+    int number1 = number_point, number2 = number_distance;
+
+    for (int i = 0; i < number1; i++)
+    {
+        // translation
+        transformation(0, 3) += distanceX / number1;
+        transformation(1, 3) += distanceY / number1;
+        transformation(2, 3) += distanceZ / number1;
+
+        // transformation()
+        Eigen::VectorXd q(6);
+        q = parser.Inverse(transformation, qPre);
+        // cout << "=========" << endl;
+        if (q(0) > 10) continue;
+
+        // printf("loops:%d",i);
+        for (int j = 0; j < number2; j++) {
+            trajectory_msgs::JointTrajectoryPoint point;
+            for (int k = 0; k < 6; k++) {
+                point.positions.push_back(qPre(k) + (q(k) - qPre(k)) / number2 * j);
+                point.velocities.push_back(0.0);
+                point.accelerations.push_back(0.0);
+            }
+            point.time_from_start = ros::Duration();
+            goal.trajectory.points.push_back(point);
+            trajectory_msg.joint_trajectory.points.push_back(point);
+        }
+        // printf("\n\njoint values : %d\n",i);
+        // std::cout << q  << "\n" << std::endl;
+        qPre = q;
+    }
+    cout << "trajectory points number: " << trajectory_msg.joint_trajectory.points.size() << endl;
+    Eigen::Matrix4d transformation2 = parser.Foward(qPre);
+    cout << "transformation2: " << "\n" << transformation2 << endl;
 
     double trajectory_velocity_scaling_ = 0.3;
     robot_trajectory::RobotTrajectory rt(group.getCurrentState()->getRobotModel(), group.getName());
@@ -573,8 +697,23 @@ void moveLineFromCurrentState(double distanceX, double distanceY, double distanc
 
 void poseInit()
 {
-    grasp_pose.orientation
-        = tf::createQuaternionMsgFromRollPitchYaw(1.57, -1.0, 0.0); // grasp orientation
+    geometry_msgs::Pose temp;
+    temp.orientation =     
+        tf::createQuaternionMsgFromRollPitchYaw(1.5, -0.01, -0.1); // grasp orientation
+    
+    grasp_pose.orientation = temp.orientation;
+    suck_pose.orientation = temp.orientation;
+    move_pose.orientation = temp.orientation;
+    postmove_pose.orientation = temp.orientation;
+    test_pose.orientation = temp.orientation;
+
+    test_pose.position.x = 0.2;
+    test_pose.position.y = -0.25;
+    test_pose.position.z = 0.3;
+    
+    postmove_pose.position.x = 0.2;
+    postmove_pose.position.y = -0.25;
+    postmove_pose.position.z = 0.55; // desk 0.35
 
     // rest pose
     gripper_rest_pose.orientation = grasp_pose.orientation;

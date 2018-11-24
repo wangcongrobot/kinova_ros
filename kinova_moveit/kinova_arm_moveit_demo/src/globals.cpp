@@ -49,18 +49,32 @@ bool arm_msg_rec_flag = false;      // data[0]=14
 bool arm_act_finished_flag = false; // data[0]=15
 bool use_gripper_flag = true;       // alvin, grasp or suck depend on target
 
-std::vector<double> current_joint_values;
+
 
 // Pose used by Alvin
-geometry_msgs::Pose grasp_pose; // Plan target from kinect --global variable
+// Grasp
 geometry_msgs::Pose pregrasp_pose;
+geometry_msgs::Pose grasp_pose; // Plan target from kinect --global variable
+geometry_msgs::Pose postgrasp_pose;
 geometry_msgs::Pose gripper_rest_pose;  // pre-defined, pose after object is grasped
 geometry_msgs::Pose gripper_place_pose; // pre-defined
 
-geometry_msgs::Pose suck_pose; //
+// Suck
 geometry_msgs::Pose presuck_pose;
+geometry_msgs::Pose suck_pose; //
+geometry_msgs::Pose postsuck_pose;
 geometry_msgs::Pose sucker_place_pose; // pre-defined
 geometry_msgs::Pose sucker_rest_pose;  // pre-defined, pose after object is grasped
 
+
+// Move
+geometry_msgs::Pose premove_pose;
+geometry_msgs::Pose move_pose; //
+geometry_msgs::Pose postmove_pose;
+
+geometry_msgs::Pose test_pose;
+
 geometry_msgs::Pose current_pose; // used to indicate arm state
 std::string hand_current_mode = "grasp";
+
+std::vector<double> current_joint_values;

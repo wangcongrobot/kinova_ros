@@ -10,7 +10,11 @@ challenge.
 
 #include "functions.h"
 #include "notice_pub_sub.h"
+#include <Eigen/Dense>
 
+
+// std::vector<double> current_joint_values;
+Eigen::VectorXd q_current;
 
 void currentJointValuesCallback(const sensor_msgs::JointState::ConstPtr& msg)
 {
@@ -20,14 +24,14 @@ void currentJointValuesCallback(const sensor_msgs::JointState::ConstPtr& msg)
         temp_joint = msg->position[i];
         current_joint_values.push_back(temp_joint);
     }
+    // q_current << current_joint_values[1],current_joint_values[2],current_joint_values[3],
+                //  current_joint_values[4],current_joint_values[5],current_joint_values[6];
     // ROS_INFO_STREAM("Get current joint values.");
     // for(size_t i=0; i<6; i++)
     // {
     //     cout << current_joint_values[i] << endl;
     // }
 }
-
-
 
 int main(int argc, char** argv)
 {
@@ -63,10 +67,13 @@ int main(int argc, char** argv)
 
     // /************************STAND BY POSE***************************/
     moveit::planning_interface::MoveGroup group("arm");
+    confirmToAct();
+    // moveToTarget(postmove_pose); // high middle
+    test_pose.position.x += 0.1;
+    test_pose.position.y += 0.0;
+    test_pose.position.z += 0.0;
+    moveToTarget(test_pose); // low
 
-    // ros::spinOnce();
-    // moveLineFromCurrentState(-0.1,0,-0.1,90,-30,5,100,2);
-    // exit(0);
 
     /*************************ARM tASK LOOP***************/
     int loop_cnt = 0;
@@ -90,6 +97,7 @@ int main(int argc, char** argv)
 
             if (use_gripper_flag) {
                 pregrasp_pose = grasp_pose;
+                pregrasp_pose.position.z += 0.15;
                 pregrasp_pose.position.y += PREGRASP_OFFSET;
                 // ROS_INFO_STREAM("pregrasp pose: " << pregrasp_pose);
 
@@ -109,36 +117,54 @@ int main(int argc, char** argv)
 
                 // 1. pregrasp
                 geometry_msgs::Pose start;
-                if (DEBUG) {
+                if (DEBUG) { 
                     start = group.getCurrentPose().pose; // virtual pose
                 } else {
                     start = pick_place.get_ee_pose(); // real pose from driver info.
                 }
                 pose_name = "PREGRASP POSE";
                 confirmToAct(start, pregrasp_pose, pose_name);
-                moveToTarget(pregrasp_pose); // plan to pre-grasp pose
+                // moveToTarget(pregrasp_pose); // plan to pre-grasp pose
+                double x,y,z;
+                x = pregrasp_pose.position.x - start.position.x;
+                y = pregrasp_pose.position.y - start.position.y;
+                z = pregrasp_pose.position.z - start.position.z;
+                ros::spinOnce();
+                moveLineFromCurrentState(x,y,z,100,2);
 
-                // 2. move forward
+                // 2. move forward and down
                 if (DEBUG) {
                     start = pregrasp_pose; // virtual pose
                 } else {
                     start = pick_place.get_ee_pose(); // real pose from driver info.
                     start.orientation = pregrasp_pose.orientation;
                 }
-                geometry_msgs::Pose goal = grasp_pose;
+                geometry_msgs::Pose goal = pregrasp_pose;
+                goal.position.y -= PREGRASP_OFFSET;
                 pose_name = "TARGET AND GRASP";
                 confirmToAct(start, goal, pose_name);
-                moveLineTarget(start, goal);
+                // moveLineTarget(start, goal);
+                ros::spinOnce();
+                moveLineFromCurrentState(0.0,-0.15,-0.0,100,2);
+
+                // Down
+                start = goal;
+                goal.position.z -= 0.12;
+                pose_name = "TARGET AND GRASP";
+                confirmToAct(start, goal, pose_name);
+                // moveLineTarget(start, goal);
+                ros::spinOnce();
+                moveLineFromCurrentState(0.0,0,-0.1,100,2);
 
                 // 3. close hand
-                notice_data_clear(&notice_data);
-                notice_data.id = 1;
-                notice_data.data[0] = 3;
-                notice_test.notice_pub_sub_pulisher(notice_data);
-                ROS_WARN("notice hand to close (1 3)");
-                ErrorCode err = hand_MsgConform_ActFinishedWait(&notice_data, &hand_msg_rec_flag,
-                    &hand_act_finished_flag, &notice_test, "FETCH");
-                error_deal(err);
+                // notice_data_clear(&notice_data);
+                // notice_data.id = 1;
+                // notice_data.data[0] = 3;
+                // notice_test.notice_pub_sub_pulisher(notice_data);
+                // ROS_WARN("notice hand to close (1 3)");
+                // ErrorCode err = hand_MsgConform_ActFinishedWait(&notice_data, &hand_msg_rec_flag,
+                //     &hand_act_finished_flag, &notice_test, "FETCH");
+                // error_deal(err);
 
                 // 4. move to stand-by pose
                 if (DEBUG) {
@@ -149,26 +175,35 @@ int main(int argc, char** argv)
                 }
 
                 goal = start;
-                goal.position.z += 0.04;
+                goal.position.y += PREGRASP_OFFSET;
                 pose_name = "MOVE TO REST (UP)";
                 confirmToAct(start, goal, pose_name);
-                moveLineTarget(start, goal);
+                // moveLineTarget(start, goal);
+                ros::spinOnce();
+                moveLineFromCurrentState(0.0,0.15,0.0,100,2);
 
-                if (DEBUG) {
-                    start = goal;
-                } else {
-                    start = pick_place.get_ee_pose();
-                    start.orientation = pregrasp_pose.orientation;
-                }
-                goal = start;
-                goal.position.y += PREGRASP_OFFSET;
-                pose_name = "MOVE OT REST (BACK)";
-                confirmToAct(start, goal, pose_name);
-                moveLineTarget(start, goal);
+                // move to pregrasp
+                pose_name = "POST MOVE POSE";
+                start = pick_place.get_ee_pose();
+                confirmToAct(start, postmove_pose, pose_name);
+                // moveToTarget(postmove_pose);
+                moveToTarget(test_pose);
 
-                pose_name = "REST POSE";
-                confirmToAct(goal, gripper_rest_pose, pose_name);
-                moveToTarget(gripper_rest_pose);
+                // if (DEBUG) {
+                //     start = goal;
+                // } else {
+                //     start = pick_place.get_ee_pose();
+                //     start.orientation = pregrasp_pose.orientation;
+                // }
+                // goal = start;
+                // goal.position.y += PREGRASP_OFFSET;
+                // pose_name = "MOVE OT REST (BACK)";
+                // confirmToAct(start, goal, pose_name);
+                // moveLineTarget(start, goal);
+
+                // pose_name = "REST POSE";
+                // confirmToAct(goal, gripper_rest_pose, pose_name);
+                // moveToTarget(gripper_rest_pose);
 
             } else {
                 // suck mode, use_gripper_flag = false
@@ -262,9 +297,15 @@ int main(int argc, char** argv)
                 confirmToAct(start, goal, pose_name);
                 moveLineTarget(start, goal); // back
 
-                pose_name = "SUCK REST POSE";
-                confirmToAct(goal, sucker_rest_pose, pose_name);
-                moveToTarget(sucker_rest_pose);
+                // pose_name = "SUCK REST POSE";
+                // confirmToAct(goal, sucker_rest_pose, pose_name);
+                // moveToTarget(sucker_rest_pose);
+
+                // move to pregrasp
+                pose_name = "PRE MOVE POSE";
+                start = pick_place.get_ee_pose();
+                confirmToAct(start, postmove_pose, pose_name);
+                moveToTarget(postmove_pose);
             }
 
             // notice main loop that fetch action finished
@@ -274,80 +315,83 @@ int main(int argc, char** argv)
             notice_test.notice_pub_sub_pulisher(notice_data);
             arm_start_fetch_flag = false;
             ROS_INFO("grasp task finished");
+
+
         }
 
         /*************************KEEP*********************************/
-        if (arm_keep_fetch_flag) {
-            notice_data_clear(&notice_data);
-            notice_data.id = 4;
-            notice_data.data[0] = 14;
-            notice_test.notice_pub_sub_pulisher(notice_data);
-            ROS_INFO("keep task begin");
+        // if (arm_keep_fetch_flag) {
+        //     notice_data_clear(&notice_data);
+        //     notice_data.id = 4;
+        //     notice_data.data[0] = 14;
+        //     notice_test.notice_pub_sub_pulisher(notice_data);
+        //     ROS_INFO("keep task begin");
 
-            notice_data_clear(&notice_data);
-            notice_data.id = 4;
-            notice_data.data[0] = 15;
-            notice_test.notice_pub_sub_pulisher(notice_data);
-            arm_keep_fetch_flag = false;
-            ROS_INFO("keep task finish");
-        }
+        //     notice_data_clear(&notice_data);
+        //     notice_data.id = 4;
+        //     notice_data.data[0] = 15;
+        //     notice_test.notice_pub_sub_pulisher(notice_data);
+        //     arm_keep_fetch_flag = false;
+        //     ROS_INFO("keep task finish");
+        // }
 
         /*************************RELEASE*********************************/
-        if (arm_release_obj_flag) {
+        // if (arm_release_obj_flag) {
 
-            // notice main loop that received msg
-            notice_data_clear(&notice_data);
-            notice_data.id = 4;
-            notice_data.data[0] = 14;
-            notice_test.notice_pub_sub_pulisher(notice_data);
-            ROS_ERROR("---------- 4 14");
+        //     // notice main loop that received msg
+        //     notice_data_clear(&notice_data);
+        //     notice_data.id = 4;
+        //     notice_data.data[0] = 14;
+        //     notice_test.notice_pub_sub_pulisher(notice_data);
+        //     ROS_ERROR("---------- 4 14");
 
-            // 1. place: move to place pose
-            if (use_gripper_flag) {
-                pose_name = "GRIPPER PLACE POSE";
-                confirmToAct(gripper_place_pose, pose_name);
-                moveToTarget(gripper_place_pose);
-            } else {
-                pose_name = "SUCKER PLACE POSE";
-                confirmToAct(sucker_place_pose, pose_name);
-                moveToTarget(sucker_place_pose);
-            }
+        //     // 1. place: move to place pose
+        //     if (use_gripper_flag) {
+        //         pose_name = "GRIPPER PLACE POSE";
+        //         confirmToAct(gripper_place_pose, pose_name);
+        //         moveToTarget(gripper_place_pose);
+        //     } else {
+        //         pose_name = "SUCKER PLACE POSE";
+        //         confirmToAct(sucker_place_pose, pose_name);
+        //         moveToTarget(sucker_place_pose);
+        //     }
 
-            // 2. open hand
-            notice_data_clear(&notice_data);
-            if (use_gripper_flag) {
-                notice_data.id = 1;
-                notice_data.data[0] = 0;
-            } else {
-                notice_data.id = 1;
-                notice_data.data[0] = 9;
-            }
+        //     // 2. open hand
+        //     notice_data_clear(&notice_data);
+        //     if (use_gripper_flag) {
+        //         notice_data.id = 1;
+        //         notice_data.data[0] = 0;
+        //     } else {
+        //         notice_data.id = 1;
+        //         notice_data.data[0] = 9;
+        //     }
 
-            // publish and wait for hand task finish signal
-            ErrorCode err = hand_MsgConform_ActFinishedWait(
-                &notice_data, &hand_msg_rec_flag, &hand_act_finished_flag, &notice_test, "RELEASE");
-            error_deal(err);
+        //     // publish and wait for hand task finish signal
+        //     ErrorCode err = hand_MsgConform_ActFinishedWait(
+        //         &notice_data, &hand_msg_rec_flag, &hand_act_finished_flag, &notice_test, "RELEASE");
+        //     error_deal(err);
 
-            // back to rest pose
-            if (use_gripper_flag) {
-                pose_name = "GRIPPER REST POSE";
-                confirmToAct(gripper_place_pose, gripper_rest_pose, pose_name);
-                moveToTarget(gripper_rest_pose);
-            } else {
-                pose_name = "SUCKER REST POSE";
-                confirmToAct(sucker_place_pose, sucker_rest_pose, pose_name);
-                moveToTarget(sucker_rest_pose);
-            }
+        //     // back to rest pose
+        //     if (use_gripper_flag) {
+        //         pose_name = "GRIPPER REST POSE";
+        //         confirmToAct(gripper_place_pose, gripper_rest_pose, pose_name);
+        //         moveToTarget(gripper_rest_pose);
+        //     } else {
+        //         pose_name = "SUCKER REST POSE";
+        //         confirmToAct(sucker_place_pose, sucker_rest_pose, pose_name);
+        //         moveToTarget(sucker_rest_pose);
+        //     }
 
-            // notice main loop that place action finished
-            notice_data_clear(&notice_data);
-            notice_data.id = 4;
-            notice_data.data[0] = 15;
-            notice_test.notice_pub_sub_pulisher(notice_data);
-            ROS_INFO("placing action finished\n");
-            arm_release_obj_flag = false;
-            // sleep(10); // TODO change time to wait
-        }
+        //     // notice main loop that place action finished
+        //     notice_data_clear(&notice_data);
+        //     notice_data.id = 4;
+        //     notice_data.data[0] = 15;
+        //     notice_test.notice_pub_sub_pulisher(notice_data);
+        //     ROS_INFO("placing action finished\n");
+        //     arm_release_obj_flag = false;
+        //     // sleep(10); // TODO change time to wait
+        // }
+
 
         notice_test.notice_sub_spinner(1);
         loop_rate.sleep();
