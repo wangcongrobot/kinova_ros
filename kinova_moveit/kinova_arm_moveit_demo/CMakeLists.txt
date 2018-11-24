@@ -80,7 +80,7 @@ target_link_libraries(jrc18sia_kinematics_parser ${catkin_LIBRARIES} ${Boost_LIB
 
 ## Declare a C++ library : motion planner
 add_library(jrc18sia_motion_planner src/jrc18sia_motion_planner.cpp)
-target_link_libraries(jrc18sia_motion_planner ${catkin_LIBRARIES} ${Boost_LIBRARIES})
+target_link_libraries(jrc18sia_motion_planner jrc18sia_kinematics_parser ${catkin_LIBRARIES} ${Boost_LIBRARIES})
 
 add_library(add_scene_objects src/add_scene_objects.cpp)
 target_link_libraries(add_scene_objects ${catkin_LIBRARIES} ${Boost_LIBRARIES} ${kinova_driver_LIBRARIES})
@@ -90,12 +90,11 @@ target_link_libraries(add_scene_objects ${catkin_LIBRARIES} ${Boost_LIBRARIES} $
 # target_link_libraries(mainControl add_scene_objects ${catkin_LIBRARIES} ${Boost_LIBRARIES} ${kinova_driver_LIBRARIES})
 # install(TARGETS  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 
-add_executable(mainControl-sweep src/mainControl.cpp)
-target_link_libraries(mainControl-sweep add_scene_objects jrc18sia_kinematics_parser jrc18sia_motion_planner ${catkin_LIBRARIES} ${Boost_LIBRARIES} ${kinova_driver_LIBRARIES})
+add_executable(mainControl-sweep 
+              src/mainControl-sweep.cpp
+              src/functions.cpp)
+target_link_libraries(mainControl-sweep add_scene_objects jrc18sia_motion_planner ${catkin_LIBRARIES} ${Boost_LIBRARIES} ${kinova_driver_LIBRARIES})
 install(TARGETS  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
-
-
-
 
 
 

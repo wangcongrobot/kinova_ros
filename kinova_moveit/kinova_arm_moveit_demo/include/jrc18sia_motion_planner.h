@@ -78,6 +78,9 @@ public:
   void moveLineTarget(const geometry_msgs::Pose& goal);
 
   /** \brief Move line in cartesion space by using Moveit cartesion planner */
+  void moveLineTarget(const geometry_msgs::Pose& start, const geometry_msgs::Pose& goal);
+
+  /** \brief Move line in cartesion space by using Moveit cartesion planner */
   void moveLineTarget(const geometry_msgs::PoseStamped& goal);
 
   /** \brief  Get current joint values from the topic "joint_states" */

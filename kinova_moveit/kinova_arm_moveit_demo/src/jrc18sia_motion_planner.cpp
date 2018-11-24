@@ -852,3 +852,62 @@ std::size_t JRCMotionPlanner::getPlanPointNum(const moveit::planning_interface::
     moveit_msgs::RobotTrajectory trajectory = plan.trajectory_;
     return trajectory.joint_trajectory.points.size();
 }
+
+void JRCMotionPlanner::moveLineTarget(const geometry_msgs::Pose& start, const geometry_msgs::Pose& goal)
+{
+    ROS_INFO("Begin cartesian line plan by MoveIt computeCartesianPath ...");
+
+    geometry_msgs::Pose start_pose = start;
+    geometry_msgs::Pose way_pose = start_pose;
+
+    std::vector<geometry_msgs::Pose> waypoints;
+    waypoints.push_back(way_pose); // first pose waypoint
+    int num_waypoint = 20;
+    float delta_x = (goal.position.x - start_pose.position.x) / (num_waypoint - 1);
+    float delta_y = (goal.position.y - start_pose.position.y) / (num_waypoint - 1);
+    float delta_z = (goal.position.z - start_pose.position.z) / (num_waypoint - 1);
+
+    // interplotate between current pose and target pose
+    for (int i = 0; i < num_waypoint - 1; i++) {
+        way_pose.position.x += delta_x;
+        way_pose.position.y += delta_y;
+        way_pose.position.z += delta_z;
+        waypoints.push_back(way_pose);
+    }
+
+    moveit_msgs::RobotTrajectory trajectory;
+    const double jump_threshold = jump_threshold_; // TODO
+    const double eef_step = 0.01;
+    ros::Time start_time = ros::Time::now();
+    double fraction = group_->computeCartesianPath(waypoints,
+                                                   eef_step,
+                                                   jump_threshold,
+                                                   trajectory);
+    if(fraction == 1.0){
+        ROS_INFO("computeCartesionPath Successfully");
+    }
+    else if(fraction == -1.0){
+        ROS_ERROR("computeCartesionPath ERROR!");
+    }
+    else {
+        ROS_ERROR_STREAM("computeCartesionPath : " << fraction*100 << " %");
+    }
+
+    std::cout << "Planning time is : " << (ros::Time::now() - start_time).toSec() << "s" << std::endl;
+
+    moveit::planning_interface::MoveGroup::Plan cartesian_plan;
+    cartesian_plan.trajectory_ = trajectory;
+
+    int plan_steps = getPlanPointNum(cartesian_plan);
+    ROS_INFO_STREAM("Line plan steps: " << plan_steps);
+    if (plan_steps < max_cartesion_plan_steps_) {
+        ROS_INFO_STREAM("Plan found in " << cartesian_plan.planning_time_ << " seconds with "
+                                         << plan_steps << " steps");
+        confirmToAct(start_pose,goal);
+        executePlan(cartesian_plan);
+    } else {
+        ROS_ERROR_STREAM("Plan found in " << cartesian_plan.planning_time_ << " seconds with "
+                                         << plan_steps << " steps");
+        exit(0); // TODO
+    }
+}

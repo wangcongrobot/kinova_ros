@@ -15,6 +15,8 @@
 #include "id_data_msgs/ID_Data.h" //using for notie event
 #include <add_scene_objects.h>    // handle scene obstacles
 #include <jrc18sia_motion_planner.h>
+#include <geometry_msgs/Pose.h>
+#include <actionlib/client/simple_action_client.h>
 
 #define PRESWEEP_OFFSET 0.2
 #define POSITION_TOLERANCE 0.04
@@ -52,6 +54,10 @@ bool arm_move2_rest_flag = false;   // move to rest pose for recognition
 bool arn_move2_home_flag = false;   // move to home pose, prepare for sweep or suck
 bool arm_msg_rec_flag = false;      // data[0]=14
 bool arm_act_finished_flag = false; // data[0]=15
+
+// hand ~ sucker
+bool hand_msg_rec_flag = false;
+bool hand_act_finished_flag = false;
 
 geometry_msgs::Pose home_pose_low; // move to home task
 geometry_msgs::Pose home_pose_mid;
@@ -193,6 +199,36 @@ void notice_pub_sub::notice_sub_spinner(char set)
 ErrorCode hand_MsgConform_ActFinishedWait(id_data_msgs::ID_Data* notice_data_test,
     bool* msg_rec_flag, bool* finished_flag, notice_pub_sub* notice_test, string task);
 
+void poseInit()
+{
+    geometry_msgs::Pose temp;
+    temp.orientation
+        = tf::createQuaternionMsgFromRollPitchYaw(1.5, -0.01, -0.1); // grasp orientation
+
+    sweep_pose.orientation = temp.orientation;
+
+    // pose before sweep or suck for each floor
+    home_pose.orientation = sweep_pose.orientation;
+    home_pose.position.x = -0.2;
+    home_pose.position.y = -0.3;
+    home_pose.position.z = 0.4;
+
+    // suck_pose.orientation
+    //     = tf::createQuaternionMsgFromRollPitchYaw(1.57, -2.5, 0.0); // suck orientation
+    suck_pose.orientation.x = 0.190;
+    suck_pose.orientation.y = -0.639;
+    suck_pose.orientation.z = 0.705;
+    suck_pose.orientation.w = 0.240;
+
+    box_pose.orientation = suck_pose.orientation;
+    box_pose.position.x = -0.2;
+    box_pose.position.y = -0.3;
+    box_pose.position.z = 0.4;
+}
+
+
+
+
 /********************************* MAIN PROGRAM ****************************/
 int main(int argc, char** argv)
 {
@@ -308,9 +344,9 @@ int main(int argc, char** argv)
             // ROS_INFO_STREAM("pregrasp pose: " << presweep_pose);
 
             // 1. pregrasp
-            pose_name = "PRE-SWEEP POSE";
-            confirmToAct(presweep_pose, pose_name);
-            moveToTarget(presweep_pose); // plan to pre-grasp pose
+            // pose_name = "PRE-SWEEP POSE";
+            // confirmToAct(presweep_pose, pose_name);
+            motion_planner.moveToTargetBestTime(presweep_pose); // plan to pre-grasp pose
 
             // 2. move forward
             geometry_msgs::Pose start;
@@ -322,12 +358,11 @@ int main(int argc, char** argv)
             }
             geometry_msgs::Pose goal = sweep_pose;
             goal.position.y -= PRESWEEP_OFFSET;
-            pose_name = "FORWARD";
-            confirmToAct(start, goal, pose_name);
-            moveLineTarget(start, goal);
+            // pose_name = "FORWARD";
+            // confirmToAct(start, goal, pose_name);
+            motion_planner.moveLineTarget(start, goal);
 
             // 3. move down
-            geometry_msgs::Pose start;
             if (DEBUG) {
                 start = presweep_pose; // virtual pose
                 start.position.z += 0.1;
@@ -335,10 +370,10 @@ int main(int argc, char** argv)
                 start = motion_planner.getCurrentPoseFromDriver(); // real pose from driver info.
                 start.orientation = presweep_pose.orientation;
             }
-            geometry_msgs::Pose goal = sweep_pose;
-            pose_name = "DOWN";
-            confirmToAct(start, goal, pose_name);
-            moveLineTarget(start, goal);
+            goal = sweep_pose;
+            // pose_name = "DOWN";
+            // confirmToAct(start, goal, pose_name);
+            motion_planner.moveLineTarget(start, goal);
 
             // 4. sweep to box
             if (DEBUG) {
@@ -350,9 +385,9 @@ int main(int argc, char** argv)
 
             goal = start;
             goal.position.y = SHELF_EDGE_Y;
-            pose_name = "SWEEP (BACK)";
-            confirmToAct(start, goal, pose_name);
-            moveLineTarget(start, goal);
+            // pose_name = "SWEEP (BACK)";
+            // confirmToAct(start, goal, pose_name);
+            motion_planner.moveLineTarget(start, goal);
 
             // 5. move to home pose
             if (DEBUG) {
@@ -362,9 +397,9 @@ int main(int argc, char** argv)
                 start = motion_planner.getCurrentPoseFromDriver();
                 start.orientation = presweep_pose.orientation;
             }
-            pose_name = "HOME POSE";
-            confirmToAct(presweep_pose, home_pose, pose_name);
-            moveToTarget(home_pose); // nonlinear plan
+            // pose_name = "HOME POSE";
+            // confirmToAct(presweep_pose, home_pose, pose_name);
+            motion_planner.moveToTargetBestTime(home_pose); // nonlinear plan
 
             // notice main loop that sweep task finished
             notice_data_clear(&notice_data);
@@ -382,9 +417,9 @@ int main(int argc, char** argv)
             presuck_pose.position.y += PRESWEEP_OFFSET;
 
             // 1. presuck
-            pose_name = "PRESUCK POSE";
-            confirmToAct(presuck_pose, pose_name);
-            moveToTarget(presuck_pose); // plan to pre-grasp pose
+            // pose_name = "PRESUCK POSE";
+            // confirmToAct(presuck_pose, pose_name);
+            motion_planner.moveToTargetBestTime(presuck_pose); // plan to pre-grasp pose
 
             // 2. move forward
             geometry_msgs::Pose start;
@@ -396,9 +431,9 @@ int main(int argc, char** argv)
             }
             geometry_msgs::Pose goal = presuck_pose;
             goal.position.y -= PRESWEEP_OFFSET;
-            pose_name = "SUCK FORWARD";
-            confirmToAct(start, goal, pose_name);
-            moveLineTarget(start, goal); // forward
+            // pose_name = "SUCK FORWARD";
+            // confirmToAct(start, goal, pose_name);
+            motion_planner.moveLineTarget(start, goal); // forward
 
             // 3. move down
             if (DEBUG) {
@@ -408,9 +443,9 @@ int main(int argc, char** argv)
                 start.orientation = presuck_pose.orientation;
             }
             goal = suck_pose;
-            pose_name = "SUCK DOWN";
-            confirmToAct(start, goal, pose_name);
-            moveLineTarget(start, goal); // down
+            // pose_name = "SUCK DOWN";
+            // confirmToAct(start, goal, pose_name);
+            motion_planner.moveLineTarget(start, goal); // down
 
             // 4. suck
             notice_data_clear(&notice_data);
@@ -463,12 +498,12 @@ int main(int argc, char** argv)
             }
             goal = suck_pose;
             goal.position.z += PRESWEEP_OFFSET;
-            pose_name = "SUCK UP ";
-            confirmToAct(start, goal, pose_name);
-            moveLineTarget(start, goal); // up
+            // pose_name = "SUCK UP ";
+            // confirmToAct(start, goal, pose_name);
+            motion_planner.moveLineTarget(start, goal); // up
 
             // 6. move to box(above) if (DEBUG)
-            {
+            if (DEBUG) {
                 start = goal; // last goal
             }
             else
@@ -477,12 +512,12 @@ int main(int argc, char** argv)
                 start.orientation = presuck_pose.orientation;
             }
             goal = presuck_pose;
-            pose_name = "SUCK  BACK";
-            confirmToAct(start, goal, pose_name);
-            moveLineTarget(start, goal); // back
-            pose_name = "SUCK box POSE";
-            confirmToAct(presuck_pose, sucker_rest_pose);
-            moveToTarget(box_pose);
+            // pose_name = "SUCK  BACK";
+            // confirmToAct(start, goal, pose_name);
+            motion_planner.moveLineTarget(start, goal); // back
+            // pose_name = "SUCK box POSE";
+            // confirmToAct(presuck_pose, sucker_rest_pose);
+            motion_planner.moveToTargetBestTime(box_pose);
 
             // 7. release, suck stop
             // TODO

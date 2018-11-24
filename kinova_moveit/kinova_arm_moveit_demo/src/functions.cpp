@@ -5,7 +5,6 @@ Some functions
 */
 
 #include "functions.h"
-#include "globals.h"
 
 //////////////////////////////////////////////FUNCTIONS/////////////////////////////
 void notice_data_clear(id_data_msgs::ID_Data* test)
@@ -77,43 +76,4 @@ void error_deal(int error_nu)
     default:
         break;
     }
-}
-
-void poseInit()
-{
-    geometry_msgs::Pose temp;
-    temp.orientation
-        = tf::createQuaternionMsgFromRollPitchYaw(1.5, -0.01, -0.1); // grasp orientation
-
-    sweep_pose.orientation = temp.orientation;
-
-    move_pose.orientation = temp.orientation;
-    postmove_pose.orientation = temp.orientation;
-    test_pose.orientation = temp.orientation;
-
-    test_pose.position.x = 0.2;
-    test_pose.position.y = -0.25;
-    test_pose.position.z = 0.3;
-
-    postmove_pose.position.x = 0.2;
-    postmove_pose.position.y = -0.25;
-    postmove_pose.position.z = 0.55; // desk 0.35
-
-    // pose before sweep or suck for each floor
-    home_pose.orientation = sweep_pose.orientation;
-    home_pose.position.x = -0.2;
-    home_pose.position.y = -0.3;
-    home_pose.position.z = 0.4;
-
-    // suck_pose.orientation
-    //     = tf::createQuaternionMsgFromRollPitchYaw(1.57, -2.5, 0.0); // suck orientation
-    suck_pose.orientation.x = 0.190;
-    suck_pose.orientation.y = -0.639;
-    suck_pose.orientation.z = 0.705;
-    suck_pose.orientation.w = 0.240;
-
-    box_pose.orientation = suck_pose.orientation;
-    box_pose.position.x = -0.2;
-    box_pose.position.y = -0.3;
-    box_pose.position.z = 0.4;
 }

@@ -45,7 +45,7 @@ challenge.
 #include "darknet_ros_msgs/TargetPoints.h"
 #include "id_data_msgs/ID_Data.h" //using for notie event
 #include <add_scene_objects.h>    // handle scene obstacles
-#include <pick_place.h>
+
 
 // #include "parser.h"
 // #include "wpi_jaco_msgs/EStop.h"
