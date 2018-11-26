@@ -4,6 +4,7 @@
 ****************************************************************/
 
 // Std C++ headers
+#include <fstream>
 #include <iostream>
 #include <map>
 #include <string>
@@ -13,10 +14,10 @@
 
 #include "functions.h"
 #include "id_data_msgs/ID_Data.h" //using for notie event
-#include <add_scene_objects.h>    // handle scene obstacles
-#include <jrc18sia_motion_planner.h>
-#include <geometry_msgs/Pose.h>
 #include <actionlib/client/simple_action_client.h>
+#include <add_scene_objects.h> // handle scene obstacles
+#include <geometry_msgs/Pose.h>
+#include <jrc18sia_motion_planner.h>
 
 #define PRESWEEP_OFFSET 0.2
 #define POSITION_TOLERANCE 0.04
@@ -29,8 +30,11 @@ using namespace std;
 
 // Flag variables
 int error_no = 0;
-bool kinect_target_valid = true;
+set<int> suck_obj_list;
+const string objects[] = { "book", "toothbrush", "can", "strips", "chips", "oreo", "pacific",
+    "shampoo", "tissue", "sausage", "toothpaste", "teether", "milk", "jelly" };
 
+bool kinect_target_valid = true;
 bool dashgo_act_finished_flag = false;
 
 // kinect distance
@@ -153,7 +157,8 @@ void notice_pub_sub::notice_msgCallback(const id_data_msgs::ID_Data::ConstPtr& n
 
     /***** communication with Jaco arm *****/
 
-    if (notice_message.id == 4 && notice_message.data[0] == 1 && notice_message.data[1] == 2) {
+    if (notice_message.id == 4 && notice_message.data[0] == 1
+        && suck_obj_list.count(notice_message.data[1]) == 0) {
         ROS_INFO("Receive command: sweep object");
         float x = notice_message.data[2] / 1000.0; // object pose, coordinate x
         float y = notice_message.data[3] / 1000.0; // object pose, coordinate y
@@ -169,7 +174,8 @@ void notice_pub_sub::notice_msgCallback(const id_data_msgs::ID_Data::ConstPtr& n
         }
     }
 
-    if (notice_message.id == 4 && notice_message.data[0] == 1 && notice_message.data[1] == 8) {
+    if (notice_message.id == 4 && notice_message.data[0] == 1
+        && suck_obj_list.count(notice_message.data[1]) > 0) {
         ROS_INFO("Receive command: suck object");
         float x = notice_message.data[2] / 1000.0; // object pose, coordinate x
         float y = notice_message.data[3] / 1000.0; // object pose, coordinate y
@@ -226,14 +232,28 @@ void poseInit()
     box_pose.position.z = 0.4;
 }
 
-
-
-
 /********************************* MAIN PROGRAM ****************************/
 int main(int argc, char** argv)
 {
     ros::init(argc, argv, "jaco_moveit_control_main");
     ros::NodeHandle nh;
+
+    // read sweep object list from sweep_object.txt
+    ifstream suck_object_file("/home/robot/suck_suck_obj_list.txt");
+    if (!suck_object_file.is_open()) {
+        ROS_ERROR("Failed to open suck object list file");
+        return -1;
+    }
+
+    ROS_INFO("Objects to be suck: ");
+    string obj_str;
+    int obj_num;
+    while (getline(suck_object_file, obj_str)) {
+        sscanf(obj_str.c_str(), "%d", &obj_num);
+        suck_obj_list.insert(obj_num);
+        ROS_INFO_STREAM("    " << objects[obj_num]);
+    }
+    suck_object_file.close();
 
     ros::AsyncSpinner spinner(2);
     spinner.start();
@@ -505,9 +525,7 @@ int main(int argc, char** argv)
             // 6. move to box(above) if (DEBUG)
             if (DEBUG) {
                 start = goal; // last goal
-            }
-            else
-            {
+            } else {
                 start = motion_planner.getCurrentPoseFromDriver();
                 start.orientation = presuck_pose.orientation;
             }
