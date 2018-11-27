@@ -1,0 +1,10 @@
+<launch>
+
+  <!-- If database loading was enabled, start mongodb as well -->
+  <include file="$(find j2n6s300_moveit_config)/launch/j2n6s300_demo.launch" output="screen" />
+
+  <include file="$(find kinova_bringup)/launch/kinova_robot.launch" output="screen" />
+
+  <include file="$(find kinova_arm_moveit_demo)/launch/kinova_arm_moveit_demo.launch" output="screen" />
+
+</launch>

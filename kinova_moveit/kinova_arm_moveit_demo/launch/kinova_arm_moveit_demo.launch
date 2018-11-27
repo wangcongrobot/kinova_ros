@@ -1,7 +1,7 @@
 <launch>
     <rosparam file="$(find kinova_arm_moveit_demo)/config/kinova_arm_moveit_demo_parameters.yaml" command="load" />
 
-  <node name="jrc18sia_motion_planner_test" pkg="kinova_arm_moveit_demo" type="jrc18sia_motion_planner_test" output="screen" />
+  <node name="mainControl_sweep" pkg="kinova_arm_moveit_demo" type="mainControl_sweep" output="screen" />
 
 
 </launch>

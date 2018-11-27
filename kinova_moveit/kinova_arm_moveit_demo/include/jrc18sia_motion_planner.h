@@ -29,6 +29,12 @@
 // custom
 #include "jrc18sia_kinematics_parser.h"
 
+#define DEBUG_PRINT false
+#define CONFIRM_ACT true
+#define TRAJECTORY_VELOCITY_SCALING 0.3 // trajectory_velocity_scaling_;
+#define MAX_PLAN_STEP 25 // max_plan_steps_
+#define MAX_CART_PLAN_STEP 100 //max_cartesion_plan_steps_
+
 class JRCMotionPlanner
 {
 public:
@@ -80,9 +86,6 @@ public:
   /** \brief Move line in cartesion space by using Moveit cartesion planner */
   void moveLineTarget(const geometry_msgs::Pose& start, const geometry_msgs::Pose& goal);
 
-  /** \brief Move line in cartesion space by using Moveit cartesion planner */
-  void moveLineTarget(const geometry_msgs::PoseStamped& goal);
-
   /** \brief  Get current joint values from the topic "joint_states" */
   std::vector<double> getCurrentJointState();
 
@@ -108,9 +111,6 @@ public:
 private:
   /** \brief Initialize the variables */
   void init();
-
-  /** \brief Get parameters from the yaml file**/
-  bool getParameters();
 
   /** \brief Add time to the trajectory */
   // TODO There is something wrong in the function.
@@ -147,6 +147,12 @@ private:
 
   /** \brief Enter 'n' to confirm to move */
   void confirmToAct(const geometry_msgs::Pose& goal);
+
+  /** \brief Get parameters from ros parameter */
+  void getParameters(const std::string& param_name, double param_value);
+
+  /** \brief Get parameters from ros parameter */
+  void getParameters(const std::string& param_name, bool param_value);
 
 private:
   ros::NodeHandle nh_;

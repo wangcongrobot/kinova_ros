@@ -96,7 +96,10 @@ add_executable(mainControl-sweep
 target_link_libraries(mainControl-sweep add_scene_objects jrc18sia_motion_planner ${catkin_LIBRARIES} ${Boost_LIBRARIES} ${kinova_driver_LIBRARIES})
 install(TARGETS  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 
-
+add_executable(jrc18sia_motion_planner_test src/jrc18sia_motion_planner_test)
+target_link_libraries(jrc18sia_motion_planner_test 
+                      jrc18sia_motion_planner
+                      ${catkin_LIBRARIES} ${Boost_LIBRARIES} ${kinova_driver_LIBRARIES})
 
 # python executable scripts
 # install(PROGRAMS

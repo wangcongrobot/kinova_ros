@@ -80,15 +80,8 @@ geometry_msgs::Pose presuck_pose;
 geometry_msgs::Pose current_pose; // used to indicate arm state
 
 /***************************NOTICE CLASS****************************/
+typedef int ErrorCode;
 class notice_pub_sub {
-public:
-    boost::function<void(const id_data_msgs::ID_Data::ConstPtr&)> notice_pub_sub_msgCallbackFun;
-
-    notice_pub_sub();
-    void notice_pub_sub_pulisher(id_data_msgs::ID_Data id_data);
-    void notice_display(id_data_msgs::ID_Data notice_msg, bool set);
-    void notice_sub_spinner(char set);
-    actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction>* ac;
 
 private:
     ros::NodeHandle notice_handle;
@@ -97,113 +90,134 @@ private:
     ros::SubscribeOptions notice_ops;
     ros::AsyncSpinner* notice_spinner;
     ros::CallbackQueue notice_callbackqueue;
-    void notice_msgCallback(const id_data_msgs::ID_Data::ConstPtr& notice_msg);
-    // ros::ServiceClient jaco_estop_client;
-};
 
-notice_pub_sub::notice_pub_sub()
-{
-    notice_pub_sub_msgCallbackFun = boost::bind(&notice_pub_sub::notice_msgCallback, this, _1);
-    notice_ops = ros::SubscribeOptions::create<id_data_msgs::ID_Data>(
-        "/notice", 10, notice_pub_sub_msgCallbackFun, ros::VoidPtr(), &notice_callbackqueue);
-    notice_subscriber = notice_handle.subscribe(notice_ops);
-    notice_spinner = new ros::AsyncSpinner(1, &notice_callbackqueue);
+    // Get from ROS parameter
+    double calibration_adjust_x;
+    double calibration_adjust_y;
+    double calibration_adjust_z;
 
-    notice_publisher = notice_handle.advertise<id_data_msgs::ID_Data>("/notice", 10);
-    // jaco_estop_client = notice_handle.serviceClient<wpi_jaco_msgs::EStop>(
-    //     "/jaco_arm/software_estop");
-}
+public:
+    boost::function<void(const id_data_msgs::ID_Data::ConstPtr&)> notice_pub_sub_msgCallbackFun;
+    actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction>* ac;
 
-void notice_pub_sub::notice_pub_sub_pulisher(id_data_msgs::ID_Data id_data)
-{
-    notice_publisher.publish(id_data);
-}
-
-void notice_pub_sub::notice_display(id_data_msgs::ID_Data notice_msg, bool set)
-{
-
-    if (set) {
-        printf("REC Notice message,ID: %d,Data: ", notice_msg.id);
-        for (char i = 0; i < 8; i++) {
-            printf("%d ", notice_msg.data[i]);
-            if (i == 7) printf("\n");
-        }
-    }
-}
-
-void notice_pub_sub::notice_msgCallback(const id_data_msgs::ID_Data::ConstPtr& notice_msg)
-{
-
-    id_data_msgs::ID_Data notice_message;
-    notice_message.id = 0;
-    for (char i = 0; i < 8; i++) notice_message.data[i] = 0;
-
-    notice_message.id = notice_msg->id;
-    for (char i = 0; i < 8; i++) notice_message.data[i] = notice_msg->data[i];
-
-    notice_pub_sub::notice_display(notice_message, true);
-
-    /************************Hand messsage**********************/
-
-    /***** Object level *****/
-
-    /***** dashgo_act_finished_flag *****/
-    if (notice_message.id == 2 && notice_message.data[0] == 8) {
-        dashgo_act_finished_flag = true;
-        ROS_WARN_STREAM("dashgo_act_finished_flag=true");
-    }
-
-    /********************** Adjust mobile bsee *****************/
-
-    /***** communication with Jaco arm *****/
-
-    if (notice_message.id == 4 && notice_message.data[0] == 1
-        && suck_obj_list.count(notice_message.data[1]) == 0) {
-        ROS_INFO("Receive command: sweep object");
-        float x = notice_message.data[2] / 1000.0; // object pose, coordinate x
-        float y = notice_message.data[3] / 1000.0; // object pose, coordinate y
-        float z = notice_message.data[4] / 1000.0; // object pose, coordinate z
-        ROS_INFO("receive pose form kinect %f, %f, %f", x, y, z);
-        if (fabs(x) < 0.5 && y < -0.3) {
-            ROS_INFO("Receive valid object position from kinect");
-            sweep_pose.position.x = x;
-            sweep_pose.position.y = y;
-            sweep_pose.position.z = z;
-            // kinect_target_valid = true;
-            arm_start_sweep_flag = true;
-        }
-    }
-
-    if (notice_message.id == 4 && notice_message.data[0] == 1
-        && suck_obj_list.count(notice_message.data[1]) > 0) {
-        ROS_INFO("Receive command: suck object");
-        float x = notice_message.data[2] / 1000.0; // object pose, coordinate x
-        float y = notice_message.data[3] / 1000.0; // object pose, coordinate y
-        float z = notice_message.data[4] / 1000.0; // object pose, coordinate z
-        if (abs(x) < 0.5 && y < -0.3) {
-            ROS_INFO("Receive valid object position from kinect");
-            suck_pose.position.x = x;
-            suck_pose.position.y = y + 0.03; // correction
-            suck_pose.position.z = z + 0.1;  // correction
-            // kinect_target_valid = true;
-            arm_start_sweep_flag = true;
-        }
-    }
-
-    if (notice_message.id == 4 && notice_message.data[0] == 0) // main loop stop arm to fetch flag
+    notice_pub_sub()
     {
-        arm_stop_sweep_flag = true;
+        notice_pub_sub_msgCallbackFun = boost::bind(&notice_pub_sub::notice_msgCallback, this, _1);
+        notice_ops = ros::SubscribeOptions::create<id_data_msgs::ID_Data>(
+            "/notice", 10, notice_pub_sub_msgCallbackFun, ros::VoidPtr(), &notice_callbackqueue);
+        notice_subscriber = notice_handle.subscribe(notice_ops);
+        notice_spinner = new ros::AsyncSpinner(1, &notice_callbackqueue);
+
+        notice_publisher = notice_handle.advertise<id_data_msgs::ID_Data>("/notice", 10);
+        // jaco_estop_client = notice_handle.serviceClient<wpi_jaco_msgs::EStop>(
+        //     "/jaco_arm/software_estop");
+        notice_handle.getParam("calibration_adjust_x", calibration_adjust_x);
+        notice_handle.getParam("calibration_adjust_y", calibration_adjust_y);
+        notice_handle.getParam("calibration_adjust_z", calibration_adjust_z);
+        std::cout << "calibration_adjust : " << calibration_adjust_x << " " << calibration_adjust_y
+                  << " " << calibration_adjust_z << std::endl;
     }
-}
 
-void notice_pub_sub::notice_sub_spinner(char set)
-{
-    if (set == 1) notice_spinner->start();
-    if (set == 0) notice_spinner->stop();
-}
+    void notice_pub_sub_pulisher(id_data_msgs::ID_Data id_data)
+    {
+        notice_publisher.publish(id_data);
+    }
 
-ErrorCode hand_MsgConform_ActFinishedWait(id_data_msgs::ID_Data* notice_data_test,
-    bool* msg_rec_flag, bool* finished_flag, notice_pub_sub* notice_test, string task);
+    void notice_display(id_data_msgs::ID_Data notice_msg, bool set)
+    {
+
+        if (set) {
+            printf("REC Notice message,ID: %d,Data: ", notice_msg.id);
+            for (char i = 0; i < 8; i++) {
+                printf("%d ", notice_msg.data[i]);
+                if (i == 7) printf("\n");
+            }
+        }
+    }
+
+    void notice_msgCallback(const id_data_msgs::ID_Data::ConstPtr& notice_msg)
+    {
+
+        id_data_msgs::ID_Data notice_message;
+        notice_message.id = 0;
+        for (char i = 0; i < 8; i++) notice_message.data[i] = 0;
+
+        notice_message.id = notice_msg->id;
+        for (char i = 0; i < 8; i++) notice_message.data[i] = notice_msg->data[i];
+
+        notice_pub_sub::notice_display(notice_message, true);
+
+        /************************Hand messsage**********************/
+
+        /***** Object level *****/
+
+        /***** dashgo_act_finished_flag *****/
+        if (notice_message.id == 2 && notice_message.data[0] == 8) {
+            dashgo_act_finished_flag = true;
+            std::cout << "dashgo_act_finished_flag=true" << std::endl;
+        }
+
+        /********************** Adjust mobile bsee *****************/
+
+        /***** communication with Jaco arm *****/
+
+        if (notice_message.id == 4 && notice_message.data[0] == 1
+            && suck_obj_list.count(notice_message.data[1]) == 0) {
+            std::cout << "Receive command: sweep object" << std::endl;
+            float x = notice_message.data[2] / 1000.0
+                      + calibration_adjust_x; // object pose, coordinate x
+            float y = notice_message.data[3] / 1000.0
+                      + calibration_adjust_y; // object pose, coordinate y
+            float z = notice_message.data[4] / 1000.0
+                      + calibration_adjust_z; // object pose, coordinate z
+            std::cout << "receive pose form kinect : " << x << " " << y << " " << z << std::endl;
+            if (fabs(x) < 0.5 && y < -0.3) {
+                std::cout << "Receive valid object position from kinect" << std::endl;
+                sweep_pose.position.x = x;
+                sweep_pose.position.y = y;
+                sweep_pose.position.z = z;
+                // kinect_target_valid = true;
+                arm_start_sweep_flag = true;
+            }
+        }
+
+        if (notice_message.id == 4 && notice_message.data[0] == 1
+            && suck_obj_list.count(notice_message.data[1]) > 0) {
+            std::cout << "Receive command: suck object" << std::endl;
+            float x = notice_message.data[2] / 1000.0
+                      + calibration_adjust_x; // object pose, coordinate x
+            float y = notice_message.data[3] / 1000.0
+                      + calibration_adjust_y; // object pose, coordinate y
+            float z = notice_message.data[4] / 1000.0
+                      + calibration_adjust_z; // object pose, coordinate z
+            if (abs(x) < 0.5 && y < -0.3) {
+                std::cout << "Receive valid object position from kinect" << std::endl;
+                suck_pose.position.x = x;
+                suck_pose.position.y = y + 0.03; // correction
+                suck_pose.position.z = z + 0.1;  // correction
+                // kinect_target_valid = true;
+                arm_start_sweep_flag = true;
+            }
+        }
+
+        if (notice_message.id == 4
+            && notice_message.data[0] == 0) // main loop stop arm to fetch flag
+        {
+            arm_stop_sweep_flag = true;
+        }
+    }
+
+    void notice_sub_spinner(char set)
+    {
+        if (set == 1) notice_spinner->start();
+        if (set == 0) notice_spinner->stop();
+    }
+    void notice_data_clear(id_data_msgs::ID_Data* test)
+    {
+        test->id = 0;
+        for (int i = 0; i < 8; i++) test->data[i] = 0;
+    }
+};
 
 void poseInit()
 {
@@ -239,13 +253,13 @@ int main(int argc, char** argv)
     ros::NodeHandle nh;
 
     // read sweep object list from sweep_object.txt
-    ifstream suck_object_file("/home/robot/suck_suck_obj_list.txt");
+    ifstream suck_object_file("/home/robot/suck_object_list.txt");
     if (!suck_object_file.is_open()) {
         ROS_ERROR("Failed to open suck object list file");
         return -1;
     }
 
-    ROS_INFO("Objects to be suck: ");
+    std::cout << "Objects to be suck: " << std::endl;
     string obj_str;
     int obj_num;
     while (getline(suck_object_file, obj_str)) {
@@ -260,6 +274,8 @@ int main(int argc, char** argv)
 
     JRCMotionPlanner motion_planner(nh);
 
+    // exit(0);
+
     notice_pub_sub notice_test; // initial a notice class
     int loop_hz = 100;
     ros::Rate loop_rate(loop_hz);
@@ -268,28 +284,32 @@ int main(int argc, char** argv)
     poseInit(); // initial predifined poses
 
     /**********************ADD COLLISION***************************/
-    ROS_INFO("Add collision objects  into the world (kinect and mobile base)");
+    std::cout << "Add collision objects  into the world (kinect and mobile base)" << std::endl;
     moveit::planning_interface::PlanningSceneInterface planning_scene_interface;
     build_workScene buildWorkScene(nh);
     handleCollisionObj(buildWorkScene); // add object
     planning_scene_interface.addCollisionObjects(
         buildWorkScene.collision_objects); // add collision objects to world
-    ROS_INFO("Collision setup finished");
+    std::cout << "Collision setup finished" << std::endl;
 
-    /*************************ARM tASK LOOP***************/
+    /*************************ARM TASK LOOP***************/
+    motion_planner.cartesionPathPlanner(
+        0.0, 0.0, 0.0, 90, 0, 0, 100, 2); // move to pregrasp orientation
+
+    // prepare position
+    // motion_planner.cartesionPathPlanner(0.1,-0.1,0.1,100,2);
     int loop_cnt = 0;
     int wait_count = 0;
     string pose_name = "NO DEFINE";
     while (ros::ok()) {
         loop_cnt++;
         if (loop_cnt % 100 == 0) {
-            ROS_INFO("Begin main loop, ready to receive command from ge_test");
+            std::cout << "Begin main loop, ready to receive command from ge_test" << std::endl;
         }
-
         if (arm_start_sweep_flag) {
             // sweep mode
-            ROS_INFO("Start sweep objects from shelf/desk");
-            notice_data_clear(&notice_data);
+            std::cout << "Start sweep objects from shelf/desk" << std::endl;
+            notice_test.notice_data_clear(&notice_data);
             notice_data.id = 4;
             notice_data.data[0] = 14;
             notice_test.notice_pub_sub_pulisher(notice_data);
@@ -366,7 +386,14 @@ int main(int argc, char** argv)
             // 1. pregrasp
             // pose_name = "PRE-SWEEP POSE";
             // confirmToAct(presweep_pose, pose_name);
-            motion_planner.moveToTargetBestTime(presweep_pose); // plan to pre-grasp pose
+            // motion_planner.moveToTargetBestTime(presweep_pose); // plan to pre-grasp pose
+            // motion_planner.moveLineTarget(presweep_pose);
+            double x,y,z;
+            geometry_msgs::Pose current_pose = motion_planner.getCurrentPoseFromDriver();
+            x = presweep_pose.position.x - current_pose.position.x;
+            y = presweep_pose.position.y - current_pose.position.y;
+            z = presweep_pose.position.z - current_pose.position.z;
+            motion_planner.cartesionPathPlanner(x,y,z,100,2);
 
             // 2. move forward
             geometry_msgs::Pose start;
@@ -380,7 +407,11 @@ int main(int argc, char** argv)
             goal.position.y -= PRESWEEP_OFFSET;
             // pose_name = "FORWARD";
             // confirmToAct(start, goal, pose_name);
-            motion_planner.moveLineTarget(start, goal);
+            // motion_planner.moveLineTarget(start, goal);
+            x = goal.position.x - start.position.x;
+            y = goal.position.y - start.position.y;
+            z = goal.position.z - start.position.z;
+            motion_planner.cartesionPathPlanner(x,y,z,100,2);
 
             // 3. move down
             if (DEBUG) {
@@ -393,7 +424,11 @@ int main(int argc, char** argv)
             goal = sweep_pose;
             // pose_name = "DOWN";
             // confirmToAct(start, goal, pose_name);
-            motion_planner.moveLineTarget(start, goal);
+            // motion_planner.moveLineTarget(start, goal);
+            x = goal.position.x - start.position.x;
+            y = goal.position.y - start.position.y;
+            z = goal.position.z - start.position.z;
+            motion_planner.cartesionPathPlanner(x,y,z,100,2);
 
             // 4. sweep to box
             if (DEBUG) {
@@ -407,8 +442,12 @@ int main(int argc, char** argv)
             goal.position.y = SHELF_EDGE_Y;
             // pose_name = "SWEEP (BACK)";
             // confirmToAct(start, goal, pose_name);
-            motion_planner.moveLineTarget(start, goal);
-
+            // motion_planner.moveLineTarget(start, goal);
+            x = goal.position.x - start.position.x;
+            y = goal.position.y - start.position.y;
+            z = goal.position.z - start.position.z;
+            motion_planner.cartesionPathPlanner(x,y,z,100,2);
+            
             // 5. move to home pose
             if (DEBUG) {
                 start = sweep_pose;
@@ -422,12 +461,12 @@ int main(int argc, char** argv)
             motion_planner.moveToTargetBestTime(home_pose); // nonlinear plan
 
             // notice main loop that sweep task finished
-            notice_data_clear(&notice_data);
+            notice_test.notice_data_clear(&notice_data);
             notice_data.id = 4;
             notice_data.data[0] = 15;
             notice_test.notice_pub_sub_pulisher(notice_data);
             arm_start_sweep_flag = false;
-            ROS_INFO("Sweep task finished");
+            std::cout << "Sweep task finished" << std::endl;
         }
 
         if (arm_start_suck_flag) {
@@ -468,16 +507,15 @@ int main(int argc, char** argv)
             motion_planner.moveLineTarget(start, goal); // down
 
             // 4. suck
-            notice_data_clear(&notice_data);
+            notice_test.notice_data_clear(&notice_data);
             notice_data.id = 1;
             notice_data.data[0] = 8;
             notice_test.notice_pub_sub_pulisher(notice_data);
-            ROS_INFO("notice sucker to suck (1 8)");
+            std::cout << "notice sucker to suck (1 8)" << std::endl;
 
             // data receive judge
             wait_count = 0;
             while (ros::ok()) {
-
                 if (hand_msg_rec_flag == true) // 1 14
                 {
                     hand_msg_rec_flag = false;
@@ -498,7 +536,7 @@ int main(int argc, char** argv)
             while (ros::ok()) {
                 wait_count++;
                 if (wait_count % 100 == 0) {
-                    ROS_INFO("waiting for suck");
+                    std::cout << "Waiting for suck..." << std::endl;
                 }
                 if (hand_act_finished_flag) // 1 2
                 {
@@ -541,12 +579,12 @@ int main(int argc, char** argv)
             // TODO
 
             // notice main loop that suck task finished
-            notice_data_clear(&notice_data);
+            notice_test.notice_data_clear(&notice_data);
             notice_data.id = 4;
             notice_data.data[0] = 15;
             notice_test.notice_pub_sub_pulisher(notice_data);
             arm_start_sweep_flag = false;
-            ROS_INFO("Suck task finished");
+            std::cout << "Suck task finished" << std::endl;
         }
 
         notice_test.notice_sub_spinner(1);
@@ -557,57 +595,3 @@ int main(int argc, char** argv)
 }
 
 /********************* functions ******************************/
-ErrorCode hand_MsgConform_ActFinishedWait(id_data_msgs::ID_Data* notice_data_test,
-    bool* msg_rec_flag, bool* finished_flag, notice_pub_sub* notice_test, string task)
-{
-    id_data_msgs::ID_Data notice_data;
-    int loop_hz = 10;
-    ros::Rate loop_rate(loop_hz);
-
-    notice_data_clear(&notice_data);
-    notice_data.id = notice_data_test->id;
-    for (int i = 0; i < 8; i++) notice_data.data[i] = notice_data_test->data[i];
-    notice_test->notice_pub_sub_pulisher(notice_data);
-
-    // hand data receive judge
-    int wait_count = 0;
-    while (ros::ok()) {
-        if (*msg_rec_flag == true) {
-            *msg_rec_flag = false;
-            wait_count = 0; // reset time for next loop
-            break;
-        }
-
-        wait_count++;
-        if (wait_count % 20 == 0) // send msg again after waiting 1s
-        {
-            ROS_ERROR("Hand didn't receive msg, retrying...");
-            notice_test->notice_pub_sub_pulisher(notice_data);
-        }
-
-        if (wait_count >= 2000) {
-            error_no = notice_data.id;
-            goto next;
-        }
-        notice_test->notice_sub_spinner(1);
-        loop_rate.sleep();
-    }
-    // hand action finish judge
-    while (ros::ok()) {
-        if (*finished_flag == true) {
-            *finished_flag = false;
-            break;
-        }
-        wait_count++;
-        if (wait_count % 20 == 0) // send msg again after waiting 1s
-        {
-            if (task == "FETCH") ROS_INFO("Waiting for hand to grasp/suck...");
-            if (task == "RELEASE") ROS_INFO("Waiting for hand to open/release...");
-            if (task == "SWITCH") ROS_INFO("Waiting for hand to switch mode...");
-        }
-        notice_test->notice_sub_spinner(1);
-        loop_rate.sleep();
-    }
-next:
-    return error_no;
-}

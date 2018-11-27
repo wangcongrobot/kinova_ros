@@ -29,12 +29,10 @@ Move some functions to this file
 #include "id_data_msgs/ID_Data.h" //using for notie event
 #include <add_scene_objects.h>    // handle scene obstacles
 
-typedef int ErrorCode;
+
 using namespace std;
 
 // function declaration
-void notice_data_clear(id_data_msgs::ID_Data* test);
-void error_deal(int error_nu);
 void handleCollisionObj(build_workScene& buildWorkScene);
 
 #endif // FUNCTIONS_H

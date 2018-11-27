@@ -7,11 +7,6 @@ Some functions
 #include "functions.h"
 
 //////////////////////////////////////////////FUNCTIONS/////////////////////////////
-void notice_data_clear(id_data_msgs::ID_Data* test)
-{
-    test->id = 0;
-    for (int i = 0; i < 8; i++) test->data[i] = 0;
-}
 
 void handleCollisionObj(build_workScene& buildWorkScene)
 {
@@ -52,28 +47,4 @@ void handleCollisionObj(build_workScene& buildWorkScene)
     kinectBodyPose.orientation.z = qbody[2];
     kinectBodyPose.orientation.w = qbody[3];
     buildWorkScene.add_boxModel("kinectBody", 0.1, 0.3, 0.1, kinectBodyPose);
-}
-
-void error_deal(int error_nu)
-{
-    switch (error_nu) {
-    case 1: {
-        ROS_ERROR("Hand doesn't work normally!");
-        break;
-    }
-    case 2: {
-        ROS_ERROR("Dashgo doesn't work normally!");
-        break;
-    }
-    case 3: {
-        ROS_ERROR("Kinect doesn't work normally!");
-        break;
-    }
-    case 4: {
-        ROS_ERROR("Kinova Arm doesn't work normally!");
-        break;
-    }
-    default:
-        break;
-    }
 }

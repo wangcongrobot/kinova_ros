@@ -416,7 +416,7 @@ int main(int argc, char** argv)
     ros::AsyncSpinner spinner(2);
     spinner.start();
 
-    kinova::PickPlace pick_place(nh); // official pick and place class
+    
     notice_pub_sub notice_test;       // initial a nitice class
     int loop_hz = 100;
     ros::Rate loop_rate(loop_hz);
