@@ -1,0 +1,8 @@
+
+<launch>
+    <rosparam file="$(find kinova_arm_moveit_demo)/config/kinova_arm_moveit_demo_parameters.yaml" command="load" />
+
+  <node name="mainControl_wangcong" pkg="kinova_arm_moveit_demo" type="mainControl_wangcong" output="screen" />
+
+
+</launch>

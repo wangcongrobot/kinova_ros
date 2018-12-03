@@ -1,2 +1,12 @@
 20181112:
 rosrun kinova_arm_moveit_demo visualControl 0 -0.0 -0.0 90 -30 5 100 2
+
+
+[ERROR] [1543542592.606370591]: 
+Invalid Trajectory: start point deviates from current robot state more than 0.01
+joint 'j2n6s300_joint_1': expected: -1.88287, current: -1.84681
+
+Solution: trajectory_execution.launch.xml
+add 
+<!-- Allowed joint-value tolerance for validation that trajectory's first point matches current robot state --> 
+<param name="trajectory_execution/allowed_start_tolerance" value="0.5"/> <!-- default 0.01 -->

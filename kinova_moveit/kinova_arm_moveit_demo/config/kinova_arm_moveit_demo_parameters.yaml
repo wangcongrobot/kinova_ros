@@ -1,12 +1,15 @@
 
 
 # trajectory processing configuration
-#trajectory_velocity_scaling : 0.3
+#trajectory_velocity_scaling : 1.0
 
 # evaluate the plan trajectory
 #max_plan_steps : 30
 #max_cartesion_plan_steps : 120
 
-calibration_adjust_x : 0.01
-calibration_adjust_y : 0.02
-calibration_adjust_z : 0.03
+calibration_adjust_x : 0.0
+calibration_adjust_y : 0.0
+calibration_adjust_z : 0.0
+
+confirm_act : False
+debug_print : False

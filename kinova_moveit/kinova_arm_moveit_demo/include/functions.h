@@ -1,11 +1,10 @@
-/*
-=========================JDX pick and place chanllenge===============
-==========================Kinova arm test============================
-This is the main program for handling picking and place task in JDX
-challenge.
-
-Move some functions to this file
-*/
+/***********************************
+*
+*
+* Utilis functions
+*
+*
+************************************/
 
 #ifndef FUCTIONS_H
 #define FUCTIONS_H

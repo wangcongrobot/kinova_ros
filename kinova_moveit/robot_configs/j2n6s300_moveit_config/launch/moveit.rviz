@@ -11,7 +11,6 @@ Panels:
         - /MotionPlanning1/Planning Request1
         - /MotionPlanning1/Planning Metrics1
         - /MotionPlanning1/Planned Path1
-        - /RobotState1
         - /TF1
         - /TF1/Frames1
       Splitter Ratio: 0.409692
@@ -154,7 +153,7 @@ Visualization Manager:
         Loop Animation: true
         Robot Alpha: 0.5
         Robot Color: 150; 50; 150
-        Show Robot Collision: false
+        Show Robot Collision: true
         Show Robot Visual: true
         Show Trail: true
         State Display Time: 0.05 s
@@ -175,7 +174,7 @@ Visualization Manager:
         Joint Violation Color: 255; 0; 255
         Planning Group: arm
         Query Goal State: false
-        Query Start State: true
+        Query Start State: false
         Show Workspace: false
         Start State Alpha: 1
         Start State Color: 0; 255; 0
@@ -276,13 +275,13 @@ Visualization Manager:
             Show Axes: false
             Show Trail: false
         Robot Alpha: 0.5
-        Show Robot Collision: false
+        Show Robot Collision: true
         Show Robot Visual: true
       Value: true
     - Attached Body Color: 150; 50; 150
       Class: moveit_rviz_plugin/RobotState
       Collision Enabled: false
-      Enabled: true
+      Enabled: false
       Links:
         All Links Enabled: true
         Expand Joint Details: false
@@ -374,7 +373,7 @@ Visualization Manager:
       Robot State Topic: display_robot_state
       Show All Links: true
       Show Highlights: true
-      Value: true
+      Value: false
       Visual Enabled: true
     - Class: rviz/TF
       Enabled: true
@@ -456,36 +455,36 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/XYOrbit
-      Distance: 1.81022
+      Distance: 2.67354
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.06
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 0.220506
-        Y: 0.107065
-        Z: 9.38773e-07
+        X: -0.0802394
+        Y: -0.027036
+        Z: 1.04308e-07
       Name: Current View
       Near Clip Distance: 0.01
-      Pitch: 0.610203
+      Pitch: 0.675203
       Target Frame: root
       Value: XYOrbit (rviz)
-      Yaw: 2.02862
+      Yaw: 2.01362
     Saved: ~
 Window Geometry:
   Displays:
-    collapsed: true
+    collapsed: false
   Height: 1056
   Help:
     collapsed: false
-  Hide Left Dock: true
+  Hide Left Dock: false
   Hide Right Dock: false
   MotionPlanning:
-    collapsed: true
+    collapsed: false
   MotionPlanning - Slider:
     collapsed: false
-  QMainWindow State: 000000ff00000000fd0000000100000000000002b1000003dafc0200000007fc00000028000003da0000000000fffffffaffffffff0100000002fb0000001c004d006f00740069006f006e0050006c0061006e006e0069006e00670000000000ffffffff000002a200fffffffb000000100044006900730070006c0061007900730000000000000002b10000016a00fffffffb0000000800480065006c00700000000342000000bb0000007600fffffffb0000000a0056006900650077007300000003b0000000b0000000b000fffffffb0000000c00430061006d00650072006100000002ff000001610000000000000000fb0000001e004d006f00740069006f006e00200050006c0061006e006e0069006e0067010000020f000001d70000000000000000fb0000002e004d006f00740069006f006e0050006c0061006e006e0069006e00670020002d00200053006c00690064006500720000000000ffffffff0000004a00fffffffb000000120020002d00200053006c00690064006500720000000000ffffffff00000000000000000000073f000003da00000001000000020000000100000002fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
+  QMainWindow State: 000000ff00000000fd0000000100000000000002b2000003dafc0200000007fc00000028000003da000001ea0100001dfa000000010100000002fb0000001c004d006f00740069006f006e0050006c0061006e006e0069006e00670100000000ffffffff000002a200fffffffb000000100044006900730070006c0061007900730100000000000002b10000016a00fffffffb0000000800480065006c00700000000342000000bb0000007600fffffffb0000000a0056006900650077007300000003b0000000b0000000b000fffffffb0000000c00430061006d00650072006100000002ff000001610000000000000000fb0000001e004d006f00740069006f006e00200050006c0061006e006e0069006e0067010000020f000001d70000000000000000fb0000002e004d006f00740069006f006e0050006c0061006e006e0069006e00670020002d00200053006c00690064006500720000000000ffffffff0000001600000016fb000000120020002d00200053006c00690064006500720000000000ffffffff000000000000000000000487000003da00000001000000020000000100000002fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
   Views:
     collapsed: false
   Width: 1855

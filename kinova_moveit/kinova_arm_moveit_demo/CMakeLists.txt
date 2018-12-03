@@ -86,20 +86,24 @@ add_library(add_scene_objects src/add_scene_objects.cpp)
 target_link_libraries(add_scene_objects ${catkin_LIBRARIES} ${Boost_LIBRARIES} ${kinova_driver_LIBRARIES})
 
 
-# add_executable(mainControl src/mainControl.cpp src/pick_place.cpp)
-# target_link_libraries(mainControl add_scene_objects ${catkin_LIBRARIES} ${Boost_LIBRARIES} ${kinova_driver_LIBRARIES})
-# install(TARGETS  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 
-add_executable(mainControl-sweep 
+
+add_executable(mainControl_sweep 
               src/mainControl-sweep.cpp
               src/functions.cpp)
-target_link_libraries(mainControl-sweep add_scene_objects jrc18sia_motion_planner ${catkin_LIBRARIES} ${Boost_LIBRARIES} ${kinova_driver_LIBRARIES})
+target_link_libraries(mainControl_sweep add_scene_objects jrc18sia_motion_planner ${catkin_LIBRARIES} ${Boost_LIBRARIES} ${kinova_driver_LIBRARIES})
 install(TARGETS  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 
 add_executable(jrc18sia_motion_planner_test src/jrc18sia_motion_planner_test)
 target_link_libraries(jrc18sia_motion_planner_test 
                       jrc18sia_motion_planner
                       ${catkin_LIBRARIES} ${Boost_LIBRARIES} ${kinova_driver_LIBRARIES})
+
+# add_executable(mainControl_wangcong 
+#               src/mainControl-wangcong.cpp
+#               src/functions.cpp)
+# target_link_libraries(mainControl_wangcong add_scene_objects jrc18sia_motion_planner ${catkin_LIBRARIES} ${Boost_LIBRARIES} ${kinova_driver_LIBRARIES})
+# install(TARGETS  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 
 # python executable scripts
 # install(PROGRAMS
