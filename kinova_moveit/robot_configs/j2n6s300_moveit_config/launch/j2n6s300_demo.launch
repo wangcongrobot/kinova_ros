@@ -40,10 +40,10 @@
   <rosparam file="$(find j2n6s300_moveit_config)/config/controllers.yaml"/>
 
   <!-- Run Rviz and load the default config to see the state of the move_group node -->
-  <include file="$(find j2n6s300_moveit_config)/launch/moveit_rviz.launch">
+  <!-- include file="$(find j2n6s300_moveit_config)/launch/moveit_rviz.launch">
     <arg name="config" value="true"/>
     <arg name="debug" value="$(arg debug)"/>
-  </include>
+  </include -->
 
   <!-- If database loading was enabled, start mongodb as well -->
   <include file="$(find j2n6s300_moveit_config)/launch/default_warehouse_db.launch" if="$(arg db)">
@@ -53,7 +53,7 @@
     <!-- wangcong added -->
     <!-- We do not have a robot connected, so publish fake joint states -->
   <node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher">
-    <param name="/use_gui" value="true"/>
+    <param name="/use_gui" value="false"/>
     <rosparam param="/source_list">[/j2n6s300_driver/out/joint_state]</rosparam>
   </node>
 

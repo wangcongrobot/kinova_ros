@@ -1,4 +1,4 @@
-#include "jrc18sia_kinematics_parser.h"
+#include "jrc18sia_motion_planner/jrc18sia_kinematics_parser.h"
 
 Parser::Parser()
 {

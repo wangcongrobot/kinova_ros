@@ -8,7 +8,7 @@
 #max_cartesion_plan_steps : 120
 
 calibration_adjust_x : 0.0
-calibration_adjust_y : 0.0
+calibration_adjust_y : 0.04
 calibration_adjust_z : 0.0
 
 confirm_act : False

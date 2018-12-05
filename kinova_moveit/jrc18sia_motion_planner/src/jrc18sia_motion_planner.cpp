@@ -333,8 +333,8 @@ double JRCMotionPlanner::cartesionPathPlanner(double distance_x, double distance
     moveit::planning_interface::MoveGroup::Plan plan;
     plan.trajectory_ = moveit_robot_traj_msg;
     confirmToAct();
-    // executePlan(plan);
-    executeTrajectory(moveit_robot_traj_msg.joint_trajectory);
+    executePlan(plan);
+    // executeTrajectory(moveit_robot_traj_msg.joint_trajectory);
 }
 
 double JRCMotionPlanner::cartesionPathPlanner(
@@ -474,8 +474,8 @@ double JRCMotionPlanner::cartesionPathPlanner(
     moveit::planning_interface::MoveGroup::Plan plan;
     plan.trajectory_ = moveit_robot_traj_msg;
     confirmToAct();
-    // executePlan(plan);
-    executeTrajectory(moveit_robot_traj_msg.joint_trajectory);
+    executePlan(plan);
+    // executeTrajectory(moveit_robot_traj_msg.joint_trajectory);
 }
 
 double JRCMotionPlanner::cartesionPathPlanner(
@@ -498,9 +498,9 @@ double JRCMotionPlanner::cartesionPathPlanner(
     }
     if(max == 0) max=100;
 
-    std::cout << "num_step : " << max * 2 << std::endl;
+    std::cout << "num_step : " << max << std::endl;
 
-    return cartesionPathPlanner(distance_x, distance_y, distance_z, max * 2, 2);
+    return cartesionPathPlanner(distance_x, distance_y, distance_z, max, 1);
 }
 
 double JRCMotionPlanner::cartesionPathPlanner(double distance_x, double distance_y, double distance_z,
@@ -523,9 +523,9 @@ double JRCMotionPlanner::cartesionPathPlanner(double distance_x, double distance
     }
     if(max == 0) max=100;
 
-    std::cout << "num_step : " << max * 2 << std::endl;
+    std::cout << "num_step : " << max << std::endl;
 
-    return cartesionPathPlanner(distance_x, distance_y, distance_z, roll, pitch, yaw, max * 2, 2);
+    return cartesionPathPlanner(distance_x, distance_y, distance_z, roll, pitch, yaw, max, 1);
 }
 
 void JRCMotionPlanner::confirmToAct()

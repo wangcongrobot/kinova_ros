@@ -1,5 +1,5 @@
 
-#include "jrc18sia_motion_planner.h"
+#include "jrc18sia_motion_planner/jrc18sia_motion_planner.h"
 
 int evaluateMoveitPlan(moveit::planning_interface::MoveGroup::Plan& plan)
 {
@@ -160,8 +160,8 @@ int main(int argc, char** argv)
     geometry_msgs::Pose current_pose;
     current_pose = motion_planner.getCurrentPoseFromDriver();
     pregrasp_pose.position = current_pose.position;
-   pregrasp_pose.position.y -= 0.15;
-   pregrasp_pose.position.z -= 0.05;
+    pregrasp_pose.position.y -= 0.15;
+    pregrasp_pose.position.z -= 0.05;
     motion_planner.moveToTargetBestTime(pregrasp_pose);
     motion_planner.cartesionPathPlanner(0.0,0.0,0.0,90,0,0,100,2);
 //    return 0;

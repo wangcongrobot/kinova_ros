@@ -28,7 +28,7 @@
 #include <actionlib/client/simple_action_client.h>
 
 // custom
-#include "jrc18sia_kinematics_parser.h"
+#include "jrc18sia_motion_planner/jrc18sia_kinematics_parser.h"
 
 #define DEBUG_PRINT false
 #define CONFIRM_ACT true
