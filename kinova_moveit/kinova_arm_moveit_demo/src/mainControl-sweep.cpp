@@ -344,10 +344,10 @@ int main(int argc, char **argv)
 	double Y = 5;
 	motion_planner.cartesionPathPlanner(x, y, z, R, P, Y); // Adjust orientation
 	joint_state = motion_planner.getCurrentJointState();
-	if (joint_state[0] < 4.0) // TODO
-	{
-		motion_planner.setJointValueTarget(0, 1.5);
-	}
+	// if (joint_state[0] < 4.0) // TODO
+	//{
+		motion_planner.setJointValueTarget(0, 1.0);
+	//}
 
 	int loop_cnt   = 0;
 	int wait_count = 0;
@@ -375,10 +375,10 @@ int main(int argc, char **argv)
 
 			// move to home pose
 			joint_state = motion_planner.getCurrentJointState();
-			if (joint_state[0] > 5.0) // TODO
-			{
-				motion_planner.setJointValueTarget(0, -1.5);
-			}
+			//if (joint_state[0] > 5.0) // TODO
+			//{
+				motion_planner.setJointValueTarget(0, -1.0);
+			//}
 
 			// 0. home_pose_start pose
 
@@ -389,9 +389,9 @@ int main(int argc, char **argv)
 					current_desk_height = DESK_HEIGHT_LOW + 0.02;
 					back_low_y = -0.05;
 					// motion_planner.cartesionPathPlanner(0.05,-0.1, -0.15);
-					R = 98;
+					R = 95;
 					P = 5;
-					Y = 5;
+					Y = 2;
 					std::cout << "\nhome_pose_low\n" << std::endl;
 					break;
 
@@ -401,7 +401,7 @@ int main(int argc, char **argv)
 					// motion_planner.cartesionPathPlanner(0.05, -0.1, 0);
 					R = 85;
 					P = 5;
-					Y = 5;
+					Y = 2;
 					std::cout << "\nhome_pose_mid\n" << std::endl;
 					break;
 
@@ -411,7 +411,7 @@ int main(int argc, char **argv)
 					// motion_planner.cartesionPathPlanner(0.05, -0.1, 0.2);
 					R = 85;
 					P = 5;
-					Y = 5;
+					Y = 2;
 					std::cout << "\nhome_pose_high\n" << std::endl;
 					break;
 			}
@@ -431,7 +431,7 @@ int main(int argc, char **argv)
 			presweep_pose = sweep_pose; // sweep pose is the target pose from kinect
 
 			presweep_pose.position.y = POST_SWEEP_Y + back_low_y;
-			presweep_pose.position.z = current_desk_height + current_target_info.shape_info.height + 0.10;
+			presweep_pose.position.z = current_desk_height + current_target_info.shape_info.height + 0.13;
 
 			current_pose = motion_planner.getCurrentPoseFromDriver();
 			x            = presweep_pose.position.x - current_pose.position.x;
@@ -526,7 +526,7 @@ int main(int argc, char **argv)
 			notice_test.notice_pub_sub_pulisher(notice_data);
 			arm_start_sweep_flag = false;
 
-			motion_planner.setJointValueTarget(0, 1.5);
+			motion_planner.setJointValueTarget(0, 1.0);
 
 			std::cout << "-----------------------------------------------" << std::endl;
 			std::cout << "Sweep task finished" << std::endl;
@@ -546,10 +546,10 @@ int main(int argc, char **argv)
 
 			// move to home pose
 			joint_state = motion_planner.getCurrentJointState();
-			if (joint_state[0] > 4.6) // TODO
-			{
-				motion_planner.setJointValueTarget(0, -1.5);
-			}
+			//if (joint_state[0] > 4.6) // TODO
+			//{
+				motion_planner.setJointValueTarget(0, -1.0);
+			//}
 
 			// 0. home_pose_start pose
 
@@ -561,7 +561,7 @@ int main(int argc, char **argv)
 					// motion_planner.cartesionPathPlanner(0.05,-0.1, -0.15);
 					R = 95;
 					P = 95;
-					Y = 5;
+					Y = 2;
 					std::cout << "\nhome_pose_low\n" << std::endl;
 					break;
 
@@ -571,7 +571,7 @@ int main(int argc, char **argv)
 					// motion_planner.cartesionPathPlanner(0.05, -0.1, 0);
 					R = 85;
 					P = 95;
-					Y = 5;
+					Y = 2;
 					std::cout << "\nhome_pose_mid\n" << std::endl;
 					break;
 
@@ -581,7 +581,7 @@ int main(int argc, char **argv)
 					// motion_planner.cartesionPathPlanner(0.05, -0.1, 0.2);
 					R = 85;
 					P = 95;
-					Y = 5;
+					Y = 2;
 					std::cout << "\nhome_pose_high\n" << std::endl;
 					break;
 			}
@@ -753,7 +753,7 @@ int main(int argc, char **argv)
 			notice_test.notice_pub_sub_pulisher(notice_data);
 			arm_start_suck_flag = false;
 
-			motion_planner.setJointValueTarget(0, 1.5);
+			motion_planner.setJointValueTarget(0, 1.0);
 
 			std::cout << "-----------------------------------------------" << std::endl;
 			std::cout << "Suck task finished" << std::endl;

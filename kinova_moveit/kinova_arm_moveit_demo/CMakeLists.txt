@@ -66,5 +66,9 @@ add_executable(mainControl_sweep
               src/mainControl-sweep.cpp
               src/functions.cpp)
 target_link_libraries(mainControl_sweep add_scene_objects jrc18sia_motion_planner ${catkin_LIBRARIES} ${Boost_LIBRARIES} ${kinova_driver_LIBRARIES})
+
+add_executable(arm_test 
+              src/arm_test.cpp)         
+target_link_libraries(arm_test  jrc18sia_motion_planner ${catkin_LIBRARIES} ${Boost_LIBRARIES} ${kinova_driver_LIBRARIES})
 install(TARGETS  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 

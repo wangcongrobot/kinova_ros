@@ -32,7 +32,7 @@
 
 #define DEBUG_PRINT false
 #define CONFIRM_ACT true
-#define TRAJECTORY_VELOCITY_SCALING 0.3 // trajectory_velocity_scaling_;
+#define TRAJECTORY_VELOCITY_SCALING 1.0 // trajectory_velocity_scaling_;
 #define MAX_PLAN_STEP 30 // max_plan_steps_
 #define MAX_CART_PLAN_STEP 200 //max_cartesion_plan_steps_
 
