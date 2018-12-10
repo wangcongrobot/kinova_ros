@@ -18,11 +18,11 @@
 
 #include "functions.h"
 #include "id_data_msgs/ID_Data.h" //using for notie event
+#include "jrc18sia_target_info.h" // Objects
 #include <actionlib/client/simple_action_client.h>
 #include <add_scene_objects.h> // handle scene obstacles
 #include <geometry_msgs/Pose.h>
 #include <jrc18sia_motion_planner/jrc18sia_motion_planner.h>
-#include "jrc18sia_target_info.h" // Objects
 
 #define PRESWEEP_OFFSET 0.15
 #define POST_SWEEP_Y -0.30
@@ -164,10 +164,9 @@ class notice_pub_sub
 		// adjust dashgo
 
 		// arm message callback
-
 		if (notice_message.id == 4 && notice_message.data[0] == 1)
 		{
-			int id                                 = notice_message.data[1];
+			int id                                 = notice_message.data[1]; // object want to fetch
 			current_target_info.header.target_id   = jrc_targets.jrc_target_info[id].header.target_id;
 			current_target_info.header.target_name = jrc_targets.jrc_target_info[id].header.target_name;
 			current_target_info.header.grasp_type  = jrc_targets.jrc_target_info[id].header.grasp_type;
@@ -175,14 +174,12 @@ class notice_pub_sub
 			current_target_info.shape_info.width   = jrc_targets.jrc_target_info[id].shape_info.width;
 			current_target_info.shape_info.height  = jrc_targets.jrc_target_info[id].shape_info.height;
 
-			std::cout << "Current task information, ID:" << id << ", name:" << current_target_info.header.target_name
-			          << ", grasp type:" << current_target_info.header.grasp_type << std::endl;
-
 			float x = notice_message.data[2] / 1000.0 + calibration_adjust_x; // object pose, coordinate x
 			float y = notice_message.data[3] / 1000.0 + calibration_adjust_y; // object pose, coordinate y
-			float z = notice_message.data[4] / 1000.0 + calibration_adjust_z;                        // object pose, coordinate z
-			// TODO 
-			if (z < (DESK_HEIGHT_MIDDLE - 0.1))                                       // 0.6 - 0.41 = 0.19
+			float z = notice_message.data[4] / 1000.0 + calibration_adjust_z; // object pose, coordinate z
+			// TODO
+			// correction for z axis
+			if (z < (DESK_HEIGHT_MIDDLE - 0.1)) // 0.6 - 0.41 = 0.19
 			{
 				current_target_info.header.table_type = LOW;
 				z                                     = DESK_HEIGHT_LOW + current_target_info.shape_info.height / 2.0;
@@ -194,14 +191,16 @@ class notice_pub_sub
 				z = DESK_HEIGHT_MIDDLE + current_target_info.shape_info.height / 2.0;
 				std::cout << "------- TABLE MIDDLE---------" << z << std::endl;
 			}
-			if (z > (DESK_HEIGHT_HIGH - 0.1) ) // 0.9 - 0.41 = 0.49
+			if (z > (DESK_HEIGHT_HIGH - 0.1)) // 0.9 - 0.41 = 0.49
 			{
 				current_target_info.header.table_type = HIGH;
 				z                                     = DESK_HEIGHT_HIGH + current_target_info.shape_info.height / 2.0;
 				std::cout << "-------------TABLE HIGH -----------" << z << std::endl;
 			}
 
-			std::cout << "Receive pose form kinect : (x,y,z)" << x << " " << y << " " << z << std::endl;
+			std::cout << "Current task information, ID:" << id << ", name:" << current_target_info.header.target_name
+			          << ", grasp type:" << current_target_info.header.grasp_type << std::endl;
+			std::cout << "Object pose form kinect : (x,y,z)" << x << " " << y << " " << z << std::endl;
 
 			if (current_target_info.header.grasp_type == SWEEP)
 			{
@@ -325,10 +324,8 @@ int main(int argc, char **argv)
 
 	poseInit(); // initial predifined poses
 
-	std::cout << "current_target_info = jrc_targets.jrc_target_info[id]; " << current_target_info.shape_info.height
-	          << std::endl;
 	// Add collisions
-	std::cout << "Add collision objects  into the world (kinect and mobile base)" << std::endl;
+	std::cout << "Add collision objects into the world (kinect and mobile base)" << std::endl;
 	moveit::planning_interface::PlanningSceneInterface planning_scene_interface;
 	build_workScene                                    buildWorkScene(nh);
 	handleCollisionObj(buildWorkScene);                                             // add object
@@ -346,7 +343,7 @@ int main(int argc, char **argv)
 	joint_state = motion_planner.getCurrentJointState();
 	// if (joint_state[0] < 4.0) // TODO
 	//{
-		motion_planner.setJointValueTarget(0, 1.0);
+	motion_planner.setJointValueTarget(0, 1.0);
 	//}
 
 	int loop_cnt   = 0;
@@ -375,9 +372,9 @@ int main(int argc, char **argv)
 
 			// move to home pose
 			joint_state = motion_planner.getCurrentJointState();
-			//if (joint_state[0] > 5.0) // TODO
+			// if (joint_state[0] > 5.0) // TODO
 			//{
-				motion_planner.setJointValueTarget(0, -1.0);
+			motion_planner.setJointValueTarget(0, -1.0);
 			//}
 
 			// 0. home_pose_start pose
@@ -387,7 +384,7 @@ int main(int argc, char **argv)
 				case LOW:
 					home_pose           = home_pose_low;
 					current_desk_height = DESK_HEIGHT_LOW + 0.02;
-					back_low_y = -0.05;
+					back_low_y          = -0.05;
 					// motion_planner.cartesionPathPlanner(0.05,-0.1, -0.15);
 					R = 95;
 					P = 5;
@@ -546,9 +543,9 @@ int main(int argc, char **argv)
 
 			// move to home pose
 			joint_state = motion_planner.getCurrentJointState();
-			//if (joint_state[0] > 4.6) // TODO
+			// if (joint_state[0] > 4.6) // TODO
 			//{
-				motion_planner.setJointValueTarget(0, -1.0);
+			motion_planner.setJointValueTarget(0, -1.0);
 			//}
 
 			// 0. home_pose_start pose

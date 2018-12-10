@@ -16,9 +16,7 @@
 // custom headers
 #include <jrc18sia_motion_planner/jrc18sia_motion_planner.h>
 
-
 using namespace std;
-
 
 // Main program
 int main(int argc, char **argv)
@@ -29,11 +27,9 @@ int main(int argc, char **argv)
 	ros::AsyncSpinner spinner(2);
 	spinner.start();
 
-	JRCMotionPlanner    motion_planner(nh);
-
+	JRCMotionPlanner motion_planner(nh);
 
 	std::cout << "Adjust kinove arm orientation to verify the dirver works normal; " << std::endl;
-
 
 	// Initial pose
 	double x = 0;
@@ -47,4 +43,3 @@ int main(int argc, char **argv)
 	ros::shutdown();
 	return 0;
 }
-
