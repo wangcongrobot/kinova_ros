@@ -24,42 +24,20 @@
 #include <geometry_msgs/Pose.h>
 #include <jrc18sia_motion_planner/jrc18sia_motion_planner.h>
 
-#define PRESWEEP_OFFSET 0.15
-#define POST_SWEEP_Y -0.30
-#define DEBUG true
+#define PRESUCK_OFFSET 0.15      //  pre-scuk positon in y direction
+#define POST_SWEEP_Y -0.30       // distance at the edge of the desk in y direction
+#define SWEEP_CENTER_TO_DESK 0.08 // distance between hand center to desk plane in z direction
+#define SUCK_CENTER_TO_DESK 0.06 // distance between hand center to desk plane in z direction
 
 using namespace std;
 
-// Flags
-int error_no = 0;
-// set<int> suck_obj_list;
-// const string objects[] = { "book", "toothbrush", "can", "strips", "chips",
-// "oreo", "pacific",
-//     "shampoo", "tissue", "sausage", "toothpaste", "teether", "milk", "jelly"
-//     };
-
-bool kinect_target_valid      = true;
 bool dashgo_act_finished_flag = false;
-
-// kinect distance
-double joy_up_distance    = 0;
-double joy_down_distance  = 0;
-double joy_left_distance  = 0;
-double joy_right_distance = 0;
-double joy_deep_distance  = 0;
-
-// alvin
-bool switch_suck_flag = false;
-bool begin_suck_flag  = false;
-bool stop_suck_flag   = false;
 
 // main loop globals: arm control section, id=4
 bool arm_start_sweep_flag  = false; // data[0]=1
 bool arm_stop_sweep_flag   = false; // data[0]=0
 bool arm_start_suck_flag   = false;
 bool arm_stop_suck_flag    = false;
-bool arm_move2_scan_flag   = false; // move to rest pose for recognition
-bool arn_move2_home_flag   = false; // move to home pose, prepare for sweep or suck
 bool arm_msg_rec_flag      = false; // data[0]=14
 bool arm_act_finished_flag = false; // data[0]=15
 
@@ -176,25 +154,28 @@ class notice_pub_sub
 
 			float x = notice_message.data[2] / 1000.0 + calibration_adjust_x; // object pose, coordinate x
 			float y = notice_message.data[3] / 1000.0 + calibration_adjust_y; // object pose, coordinate y
-			float z = notice_message.data[4] / 1000.0 + calibration_adjust_z; // object pose, coordinate z
+			float z = notice_message.data[4] / 1000.0;                        // object pose, coordinate z
 			// TODO
 			// correction for z axis
 			if (z < (DESK_HEIGHT_MIDDLE - 0.1)) // 0.6 - 0.41 = 0.19
 			{
 				current_target_info.header.table_type = LOW;
-				z                                     = DESK_HEIGHT_LOW + current_target_info.shape_info.height / 2.0;
+				// z                                     = DESK_HEIGHT_LOW + SWEEP_CENTER_TO_DESK +
+				// calibration_adjust_z;
 				std::cout << "---------TABLE LOW -----------" << z << std::endl;
 			}
 			if (z > (DESK_HEIGHT_MIDDLE - 0.1) && z < (DESK_HEIGHT_HIGH - 0.1)) // 0.19 ~ 0.49
 			{
 				current_target_info.header.table_type = MIDDLE;
-				z = DESK_HEIGHT_MIDDLE + current_target_info.shape_info.height / 2.0;
+				// z                                     = DESK_HEIGHT_MIDDLE + SWEEP_CENTER_TO_DESK +
+				// calibration_adjust_z;
 				std::cout << "------- TABLE MIDDLE---------" << z << std::endl;
 			}
 			if (z > (DESK_HEIGHT_HIGH - 0.1)) // 0.9 - 0.41 = 0.49
 			{
 				current_target_info.header.table_type = HIGH;
-				z                                     = DESK_HEIGHT_HIGH + current_target_info.shape_info.height / 2.0;
+				// z                                     = DESK_HEIGHT_HIGH + SWEEP_CENTER_TO_DESK +
+				// calibration_adjust_z;
 				std::cout << "-------------TABLE HIGH -----------" << z << std::endl;
 			}
 
@@ -202,17 +183,19 @@ class notice_pub_sub
 			          << ", grasp type:" << current_target_info.header.grasp_type << std::endl;
 			std::cout << "Object pose form kinect : (x,y,z)" << x << " " << y << " " << z << std::endl;
 
-			if (current_target_info.header.grasp_type == SWEEP)
+			if (current_target_info.header.grasp_type == SWEEP && x <= 0.5 && x > 0.1 && y <= -0.40 && y > -0.80 &&
+			    z >= -0.10)
 			{
 				sweep_pose.position.x = x;
-				sweep_pose.position.y = y;
+				sweep_pose.position.y = y + 0.065;
 				sweep_pose.position.z = z;
 				arm_start_sweep_flag  = true;
 			}
-			if (current_target_info.header.grasp_type == SUCK)
+			if (current_target_info.header.grasp_type == SUCK && x <= 0.5 && x > 0.1 && y <= -0.40 && y > -0.80 &&
+			    z >= -0.10)
 			{
 				suck_pose.position.x = x;
-				suck_pose.position.y = y;
+				suck_pose.position.y = y + 0.02;
 				suck_pose.position.z = z;
 				arm_start_suck_flag  = true;
 			}
@@ -255,48 +238,43 @@ void poseInit()
 	//   temp.orientation = tf::createQuaternionMsgFromRollPitchYaw(
 	//       1.5, -0.01, -0.1); // grasp orientation
 
-	tf::Quaternion temp_q;
+	// tf::Quaternion temp_q;
 	/**@brief Set the quaternion using fixed axis RPY
 	* @param roll Angle around X
 	* @param pitch Angle around Y
 	* @param yaw Angle around Z*/
-	temp_q.setRPY(1.57, -0.5, 0.0); // RPY = [-1.3712788144541441,
-	                                // -1.262354007205017, 2.821623451425446]
-	sweep_pose.orientation.x = temp_q.x();
-	sweep_pose.orientation.y = temp_q.y();
-	sweep_pose.orientation.z = temp_q.z();
-	sweep_pose.orientation.w = temp_q.w();
+	// temp_q.setRPY(1.57, -0.5, 0.0); // RPY = [-1.3712788144541441,
+	//                                 // -1.262354007205017, 2.821623451425446]
+	// sweep_pose.orientation.x = temp_q.x();
+	// sweep_pose.orientation.y = temp_q.y();
+	// sweep_pose.orientation.z = temp_q.z();
+	// sweep_pose.orientation.w = temp_q.w();
 
 	// pose before sweep or suck for each floor
 	// home_pose.orientation = sweep_pose.orientation;
-	home_pose_high.orientation = sweep_pose.orientation;
-	home_pose_high.position.x  = 0.18;
-	home_pose_high.position.y  = -0.3;
-	home_pose_high.position.z  = DESK_HEIGHT_HIGH + 0.1;
+	// home_pose_high.orientation = sweep_pose.orientation;
+	home_pose_high.position.x = 0.18;
+	home_pose_high.position.y = -0.3;
+	home_pose_high.position.z = DESK_HEIGHT_HIGH + 0.1;
+
+	// home_pose_mid.orientation = sweep_pose.orientation;
+	home_pose_mid.position.x = 0.18;
+	home_pose_mid.position.y = -0.3;
+	home_pose_mid.position.z = DESK_HEIGHT_MIDDLE + 0.2;
+
+	// home_pose_low.orientation = sweep_pose.orientation;
+	home_pose_low.position.x = 0.18;
+	home_pose_low.position.y = -0.3;
+	home_pose_low.position.z = DESK_HEIGHT_LOW + 0.4;
 
 	home_pose = home_pose_high; // Default start home pose is high
 
-	home_pose_mid.orientation = sweep_pose.orientation;
-	home_pose_mid.position.x  = 0.18;
-	home_pose_mid.position.y  = -0.3;
-	home_pose_mid.position.z  = DESK_HEIGHT_MIDDLE + 0.2;
 
-	home_pose_low.orientation = sweep_pose.orientation;
-	home_pose_low.position.x  = 0.18;
-	home_pose_low.position.y  = -0.3;
-	home_pose_low.position.z  = DESK_HEIGHT_LOW + 0.4;
-	// suck_pose.orientation
-	//     = tf::createQuaternionMsgFromRollPitchYaw(1.57, -2.5, 0.0); // suck
-	//     orientation
-	suck_pose.orientation.x = 0.190;
-	suck_pose.orientation.y = -0.639;
-	suck_pose.orientation.z = 0.705;
-	suck_pose.orientation.w = 0.240;
 
-	box_pose.orientation = suck_pose.orientation;
-	box_pose.position.x  = 0.23;
-	box_pose.position.y  = -0.3;
-	box_pose.position.z  = 0.4;
+	// box_pose.orientation = suck_pose.orientation;
+	box_pose.position.x = 0.23;
+	box_pose.position.y = -0.3;
+	box_pose.position.z = 0.4;
 }
 
 void sweep();
@@ -316,7 +294,6 @@ int main(int argc, char **argv)
 	float               current_desk_height; // which floor the current task relates to
 
 	// exit(0);
-
 	notice_pub_sub        notice_test; // initial a notice class
 	int                   loop_hz = 100;
 	ros::Rate             loop_rate(loop_hz);
@@ -423,12 +400,12 @@ int main(int argc, char **argv)
 			// motion_planner.cartesionPathPlanner(x, y, z);
 			// motion_planner.cartesionPathPlanner(0, 0, 0, R, P, Y);
 
-			// 1. pregrasp
-			pose_name     = "PREGRASP";
+			// 1. presweep
+			pose_name     = "PRESWEEP";
 			presweep_pose = sweep_pose; // sweep pose is the target pose from kinect
 
 			presweep_pose.position.y = POST_SWEEP_Y + back_low_y;
-			presweep_pose.position.z = current_desk_height + current_target_info.shape_info.height + 0.13;
+			presweep_pose.position.z = current_desk_height + current_target_info.shape_info.height + 0.11;
 
 			current_pose = motion_planner.getCurrentPoseFromDriver();
 			x            = presweep_pose.position.x - current_pose.position.x;
@@ -460,7 +437,7 @@ int main(int argc, char **argv)
 			// 3. move down
 			geometry_msgs::Pose pose3;
 			pose3            = pose2;
-			pose3.position.z = current_desk_height + 0.08;
+			pose3.position.z = current_desk_height + SWEEP_CENTER_TO_DESK;
 			pose_name        = "DOWN";
 			current_pose     = motion_planner.getCurrentPoseFromDriver();
 			x                = pose3.position.x - current_pose.position.x;
@@ -597,7 +574,7 @@ int main(int argc, char **argv)
 			presuck_pose = suck_pose; // sweep pose is the target pose from kinect
 			pose_name    = "PRESUCK";
 
-			presuck_pose.position.y += PRESWEEP_OFFSET;
+			presuck_pose.position.y += PRESUCK_OFFSET;
 			presuck_pose.position.z = current_desk_height + current_target_info.shape_info.height + 0.1;
 
 			current_pose = motion_planner.getCurrentPoseFromDriver();
@@ -625,11 +602,11 @@ int main(int argc, char **argv)
 			motion_planner.cartesionPathPlanner(x, y, z, R, P, Y);
 			motion_planner.confirmToAct();
 
-			// 3. move down
+			// 3. suck down
 			geometry_msgs::Pose pose3;
-			pose3 = pose2;
-			pose3.position.z =
-			    current_desk_height + current_target_info.shape_info.height + 0.06; // 0.06:中心补偿，吸取面到中心
+			pose3            = pose2;
+			pose3.position.z = current_desk_height + current_target_info.shape_info.height +
+			                   SUCK_CENTER_TO_DESK; // 0.06:中心补偿，吸取面到中心
 			pose_name    = "DOWN";
 			current_pose = motion_planner.getCurrentPoseFromDriver();
 			x            = pose3.position.x - current_pose.position.x;
@@ -701,7 +678,7 @@ int main(int argc, char **argv)
 			// 6. move back
 			geometry_msgs::Pose pose5;
 			pose5 = pose4;
-			pose5.position.y += PRESWEEP_OFFSET;
+			pose5.position.y += PRESUCK_OFFSET;
 			pose_name    = "BACK";
 			current_pose = motion_planner.getCurrentPoseFromDriver();
 			x            = pose5.position.x - current_pose.position.x;
