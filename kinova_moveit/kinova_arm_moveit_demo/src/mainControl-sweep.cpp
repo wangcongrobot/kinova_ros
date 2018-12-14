@@ -290,7 +290,6 @@ int main(int argc, char **argv)
 	spinner.start();
 
 	JRCMotionPlanner    motion_planner(nh);
-	std::vector<double> joint_state;
 	float               current_desk_height; // which floor the current task relates to
 
 	// exit(0);
@@ -317,11 +316,7 @@ int main(int argc, char **argv)
 	double P = 5;
 	double Y = 5;
 	motion_planner.cartesionPathPlanner(x, y, z, R, P, Y); // Adjust orientation
-	joint_state = motion_planner.getCurrentJointState();
-	// if (joint_state[0] < 4.0) // TODO
-	//{
 	motion_planner.setJointValueTarget(0, 1.0);
-	//}
 
 	int loop_cnt   = 0;
 	int wait_count = 0;
@@ -346,14 +341,10 @@ int main(int argc, char **argv)
 			notice_data.id      = 4;
 			notice_data.data[0] = 14;
 			notice_test.notice_pub_sub_pulisher(notice_data);
-
-			// move to home pose
-			joint_state = motion_planner.getCurrentJointState();
-			// if (joint_state[0] > 5.0) // TODO
-			//{
+			
+			// move back to home pose
 			motion_planner.setJointValueTarget(0, -1.0);
-			//}
-
+	
 			// 0. home_pose_start pose
 
 			switch (current_target_info.header.table_type)
@@ -397,13 +388,10 @@ int main(int argc, char **argv)
 			//   motion_planner.confirmToAct(home_pose, current_pose);
 
 			motion_planner.cartesionPathPlanner(x, y, z, R, P, Y);
-			// motion_planner.cartesionPathPlanner(x, y, z);
-			// motion_planner.cartesionPathPlanner(0, 0, 0, R, P, Y);
 
 			// 1. presweep
 			pose_name     = "PRESWEEP";
 			presweep_pose = sweep_pose; // sweep pose is the target pose from kinect
-
 			presweep_pose.position.y = POST_SWEEP_Y + back_low_y;
 			presweep_pose.position.z = current_desk_height + current_target_info.shape_info.height + 0.11;
 
@@ -415,7 +403,7 @@ int main(int argc, char **argv)
 			motion_planner.confirmToAct(current_pose, presweep_pose, pose_name);
 			motion_planner.cartesionPathPlanner(x, y, z, R, P, Y);
 			// motion_planner.cartesionPathPlanner(x, y, z);
-			motion_planner.confirmToAct();
+			motion_planner.confirmToAct(); 
 			// motion_planner.moveLineTarget(pose1);
 
 			// 2. move forward
@@ -443,10 +431,6 @@ int main(int argc, char **argv)
 			x                = pose3.position.x - current_pose.position.x;
 			y                = pose3.position.y - current_pose.position.y;
 			z                = pose3.position.z - current_pose.position.z;
-			// motion_planner.confirmToAct(pose2, pose3, pose_name);
-			// motion_planner.moveLineTarget(pose2,pose3);
-			// motion_planner.moveLineTarget(pose3);
-			// motion_planner.moveToTargetBestTime(pose3);
 			cout << x << " " << y << " " << z << endl;
 			motion_planner.confirmToAct(current_pose, pose3, pose_name);
 			motion_planner.cartesionPathPlanner(x, y, z, R, P, Y);
@@ -458,10 +442,6 @@ int main(int argc, char **argv)
 			pose4            = pose3;
 			pose4.position.y = POST_SWEEP_Y + back_low_y;
 			pose_name        = "BACK";
-			// motion_planner.confirmToAct(pose3, pose4, pose_name);
-			// motion_planner.moveLineTarget(pose3,pose4);
-			// motion_planner.moveLineTarget(pose4);
-			// motion_planner.moveToTargetBestTime(pose4);
 			current_pose = motion_planner.getCurrentPoseFromDriver();
 			x            = pose4.position.x - current_pose.position.x;
 			y            = pose4.position.y - current_pose.position.y;
@@ -483,7 +463,6 @@ int main(int argc, char **argv)
 				// motion_planner.cartesionPathPlanner(x, y, z);
 				motion_planner.confirmToAct();
 			}
-
 			current_pose = motion_planner.getCurrentPoseFromDriver();
 			x            = home_pose.position.x - current_pose.position.x;
 			y            = home_pose.position.y - current_pose.position.y;
@@ -499,7 +478,8 @@ int main(int argc, char **argv)
 			notice_data.data[1] = current_target_info.header.target_id;
 			notice_test.notice_pub_sub_pulisher(notice_data);
 			arm_start_sweep_flag = false;
-
+			
+			scan << "Move to scan pose ..." << endl;
 			motion_planner.setJointValueTarget(0, 1.0);
 
 			std::cout << "-----------------------------------------------" << std::endl;
@@ -518,15 +498,10 @@ int main(int argc, char **argv)
 			notice_data.data[0] = 14;
 			notice_test.notice_pub_sub_pulisher(notice_data);
 
-			// move to home pose
-			joint_state = motion_planner.getCurrentJointState();
-			// if (joint_state[0] > 4.6) // TODO
-			//{
+			// move to home pose (from scan pose)
 			motion_planner.setJointValueTarget(0, -1.0);
-			//}
 
 			// 0. home_pose_start pose
-
 			switch (current_target_info.header.table_type)
 			{
 				case LOW:
@@ -570,7 +545,6 @@ int main(int argc, char **argv)
 			motion_planner.cartesionPathPlanner(x, y, z, R, P, Y);
 
 			// 1. pre-suck
-			geometry_msgs::Pose pose1;
 			presuck_pose = suck_pose; // sweep pose is the target pose from kinect
 			pose_name    = "PRESUCK";
 
@@ -585,7 +559,6 @@ int main(int argc, char **argv)
 			motion_planner.confirmToAct(current_pose, presuck_pose, pose_name);
 			motion_planner.cartesionPathPlanner(x, y, z, R, P, Y);
 			motion_planner.confirmToAct();
-			// motion_planner.moveLineTarget(pose1);
 
 			// 2. move forward
 			geometry_msgs::Pose pose2;
@@ -601,24 +574,8 @@ int main(int argc, char **argv)
 			motion_planner.confirmToAct(current_pose, pose2, pose_name);
 			motion_planner.cartesionPathPlanner(x, y, z, R, P, Y);
 			motion_planner.confirmToAct();
-
-			// 3. suck down
-			geometry_msgs::Pose pose3;
-			pose3            = pose2;
-			pose3.position.z = current_desk_height + current_target_info.shape_info.height +
-			                   SUCK_CENTER_TO_DESK; // 0.06:中心补偿，吸取面到中心
-			pose_name    = "DOWN";
-			current_pose = motion_planner.getCurrentPoseFromDriver();
-			x            = pose3.position.x - current_pose.position.x;
-			y            = pose3.position.y - current_pose.position.y;
-			z            = pose3.position.z - current_pose.position.z;
-
-			cout << x << " " << y << " " << z << endl;
-			motion_planner.confirmToAct(pose3, current_pose, pose_name);
-			motion_planner.cartesionPathPlanner(x, y, z, R, P, Y);
-			motion_planner.confirmToAct();
-
-			// 4. suck
+			
+			// 3. suck
 			notice_test.notice_data_clear(&notice_data);
 			notice_data.id      = 1;
 			notice_data.data[0] = 8;
@@ -636,7 +593,7 @@ int main(int argc, char **argv)
 				wait_count++;
 				if (wait_count % 100 == 0) // send msg again after waiting 1s
 				{
-					ROS_ERROR("jaco didn't receive hand msg,Retrying...");
+					ROS_ERROR("Sucker haven't receive message,Retrying...");
 					notice_test.notice_pub_sub_pulisher(notice_data);
 				}
 				notice_test.notice_sub_spinner(1);
@@ -660,6 +617,22 @@ int main(int argc, char **argv)
 				loop_rate.sleep();
 			}
 
+			// 4. suck down
+			geometry_msgs::Pose pose3;
+			pose3            = pose2;
+			pose3.position.z = current_desk_height + current_target_info.shape_info.height +
+			                   SUCK_CENTER_TO_DESK; // 0.06:中心补偿，吸取面到中心
+			pose_name    = "DOWN";
+			current_pose = motion_planner.getCurrentPoseFromDriver();
+			x            = pose3.position.x - current_pose.position.x;
+			y            = pose3.position.y - current_pose.position.y;
+			z            = pose3.position.z - current_pose.position.z;
+
+			cout << x << " " << y << " " << z << endl;
+			motion_planner.confirmToAct(current_pose, pose3, pose_name);
+			motion_planner.cartesionPathPlanner(x, y, z, R, P, Y);
+			motion_planner.confirmToAct();
+
 			// 5. move up
 			geometry_msgs::Pose pose4;
 			pose4 = pose3;
@@ -671,7 +644,7 @@ int main(int argc, char **argv)
 			z            = pose4.position.z - current_pose.position.z;
 
 			cout << x << " " << y << " " << z << endl;
-			motion_planner.confirmToAct(pose4, current_pose, pose_name);
+			motion_planner.confirmToAct(current_pose, pose4, pose_name);
 			motion_planner.cartesionPathPlanner(x, y, z, R, P, Y);
 			motion_planner.confirmToAct();
 
@@ -686,7 +659,7 @@ int main(int argc, char **argv)
 			z            = pose5.position.z - current_pose.position.z;
 
 			cout << x << " " << y << " " << z << endl;
-			motion_planner.confirmToAct(pose5, current_pose, pose_name);
+			motion_planner.confirmToAct(current_pose, pose5, pose_name);
 			motion_planner.cartesionPathPlanner(x, y, z, R, P, Y);
 			motion_planner.confirmToAct();
 
@@ -698,7 +671,7 @@ int main(int argc, char **argv)
 			z            = 0.0;
 
 			cout << x << " " << y << " " << z << endl;
-			motion_planner.confirmToAct(box_pose, current_pose, pose_name);
+			motion_planner.confirmToAct(current_pose, box_pose, pose_name);
 			motion_planner.cartesionPathPlanner(x, y, z, R, P, Y);
 			motion_planner.confirmToAct();
 
@@ -708,15 +681,16 @@ int main(int argc, char **argv)
 			notice_data.data[0] = 9;
 			notice_test.notice_pub_sub_pulisher(notice_data);
 			arm_start_sweep_flag = false;
-			ros::Duration(2).sleep();
+			ros::Duration(1).sleep();
 
 			// 8. move to home
+			pose_name = "SUCK HOME POSE";
 			current_pose = motion_planner.getCurrentPoseFromDriver();
 			x            = home_pose.position.x - current_pose.position.x;
 			y            = home_pose.position.y - current_pose.position.y;
 			z            = home_pose.position.z - current_pose.position.z;
 			cout << x << " " << y << " " << z << endl;
-			motion_planner.confirmToAct(home_pose, current_pose);
+			motion_planner.confirmToAct(current_pose, home_pose, pose_name);
 			motion_planner.cartesionPathPlanner(x, y, z, R, P, Y);
 
 			// notice main loop that suck task finished
