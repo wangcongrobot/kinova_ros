@@ -24,12 +24,11 @@
 #include <geometry_msgs/Pose.h>
 #include <jrc18sia_motion_planner/jrc18sia_motion_planner.h>
 
-// #define PRESUCK_OFFSET 0.15       //  pre-scuk positon in y direction
-#define POST_SWEEP_Y -0.35        // distance at the edge of the desk in y direction
-#define SWEEP_CENTER_TO_DESK 0.10 // distance between hand center to desk plane in z direction
-#define PRE_SWEEP_CENTER_TO_DESK 0.12
-#define SUCK_CENTER_TO_SURFACE 0.07  // distance between hand center to desk plane in z direction
-#define PRE_SUCK_CENTER_TO_SURFACE 0.12;
+#define PRESUCK_OFFSET 0.15       //  pre-scuk positon in y direction
+#define POST_SWEEP_Y -0.30        // distance at the edge of the desk in y direction
+#define SWEEP_CENTER_TO_DESK 0.08 // distance between hand center to desk plane in z direction
+#define SUCK_CENTER_TO_DESK 0.07  // distance between hand center to desk plane in z direction
+
 using namespace std;
 
 bool dashgo_act_finished_flag = false;
@@ -42,9 +41,6 @@ bool arm_stop_suck_flag    = false;
 bool arm_msg_rec_flag      = false; // data[0]=14
 bool arm_act_finished_flag = false; // data[0]=15
 
-
-bool move_to_scan_pose_flag = true; // move to scan pose
-bool early_terminate_flag = false; // broadcast 15
 // sucker
 bool sucker_msg_rec_flag      = false;
 bool sucker_act_finished_flag = false;
@@ -67,10 +63,6 @@ geometry_msgs::Pose current_pose; // used to indicate arm state
 
 JRCTarget  jrc_targets;         // objects class
 TargetInfo current_target_info; // Current target from kinect
-
-double target_adjust_x;
-double target_adjust_y;
-double target_adjust_z;
 
 /***************************NOTICE CLASS****************************/
 typedef int ErrorCode;
@@ -110,7 +102,6 @@ class notice_pub_sub
 		notice_handle.getParam("calibration_adjust_z", calibration_adjust_z);
 		std::cout << "calibration_adjust : " << calibration_adjust_x << " " << calibration_adjust_y << " "
 		          << calibration_adjust_z << std::endl;
-
 	}
 
 	void notice_pub_sub_pulisher(id_data_msgs::ID_Data id_data) { notice_publisher.publish(id_data); }
@@ -131,9 +122,6 @@ class notice_pub_sub
 
 	void notice_msgCallback(const id_data_msgs::ID_Data::ConstPtr &notice_msg)
 	{
-		target_adjust_x = 0.0;
-		target_adjust_y = 0.0;
-		target_adjust_z = 0.0;
 
 		id_data_msgs::ID_Data notice_message;
 		notice_message.id = 0;
@@ -167,227 +155,6 @@ class notice_pub_sub
 			float x = notice_message.data[2] / 1000.0 + calibration_adjust_x; // object pose, coordinate x
 			float y = notice_message.data[3] / 1000.0 + calibration_adjust_y; // object pose, coordinate y
 			float z = notice_message.data[4] / 1000.0;                        // object pose, coordinate z
-			
-			switch (id)
-			{
-				case 9: // 香肠
-					if (y <= -0.65)
-					{
-						target_adjust_x = 0.0;
-						y = -0.63;
-						// target_adjust_y = 0.10;
-						target_adjust_z = -0.03;
-						// y += 0.07;
-						break;
-					}
-				case 14: // 药瓶
-					{
-						y = -0.60;
-						break;
-					}
-				case 6: // 苏打饼干
-					if (y >= -0.6)
-					{
-						target_adjust_x = 0.0;
-						target_adjust_y = -0.05;
-						target_adjust_z = 0.0;						
-						// y -= 0.05;
-						break;
-					}
-				case 12: // 牛奶
-					if (y >= -0.6)
-					{
-						target_adjust_x = 0.025;
-						target_adjust_y = -0.03;
-						target_adjust_z = 0.0;
-						// y -= 0.03;
-						break;
-					}
-				case 11: // 磨牙棒
-					if (y >= -0.6)
-					{
-						target_adjust_x = 0.0;
-						target_adjust_y = -0.03;
-						target_adjust_z = -0.04;
-						// y -= 0.03;
-						break;
-					}
-				case 13: // 果冻
-					if (y >= -0.6)
-					{
-						target_adjust_x = 0.03;
-						target_adjust_y = 0.0;
-						target_adjust_z = 0.0;
-						// y -= 0.03;
-						break;
-					}
-			}
-						
-			// switch (id)
-			// {
-			// 	case 6: // 饼干
-			// 	{
-			// 		if (y < -0.7) // too far
-			// 		{
-			// 			target_adjust_x = 0.0;
-			// 			y = -0.68;
-			// 			target_adjust_z = 0.0;
-			// 		}
-			// 		if (y > -0.58) // too close
-			// 		{   
-			// 			target_adjust_x = 0.0;
-			// 			target_adjust_y = -0.05;
-			// 			target_adjust_z = 0.0;
-			// 		}
-			// 		break;
-			// 	}
-			// 	case 10: // 牙膏
-			// 	{
-			// 		if (y < -0.75) // too far
-			// 		{
-			// 			target_adjust_x = 0.0;
-			// 			y = -0.68;
-			// 			target_adjust_z = 0.0;
-			// 		}
-			// 		if (y > -0.58) // too close
-			// 		{   
-			// 			target_adjust_x = 0.0;
-			// 			y = -0.68;
-			// 			target_adjust_z = 0.0;
-			// 		}
-			// 		break;
-			// 	}
-			// 	case 14:  // 药片
-			// 	{
-			// 		if (y < -0.68) // too far
-			// 		{
-			// 			target_adjust_x = 0.0;
-			// 			y = -0.65;
-			// 			target_adjust_z = 0.0;
-			// 		}
-			// 		if (y > -0.58) // too close
-			// 		{   
-			// 			target_adjust_x = 0.0;
-			// 			y = -0.65;
-			// 			target_adjust_z = 0.0;
-			// 		}
-			// 		break;
-			// 	}
-			// 	case 9: // 火腿
-			// 	{
-			// 		if (y < -0.68) // too far
-			// 		{
-			// 			target_adjust_x = 0.0;
-			// 			y = -0.65;
-			// 			// target_adjust_z = 0.0;
-			// 		}
-			// 		if (y > -0.58) // too close
-			// 		{   
-			// 			target_adjust_x = 0.0;
-			// 			y = -0.65;
-			// 			// target_adjust_z = 0.0;
-			// 		}
-			// 		target_adjust_z = -0.03;
-			// 		break;
-			// 	}
-			// 	case 18: // 香水
-			// 	{
-			// 		if (y < -0.7) // too far
-			// 		{
-			// 			target_adjust_x = 0.0;
-			// 			y = -0.68;
-			// 			target_adjust_z = 0.0;
-			// 		}
-			// 		if (y > -0.58) // too close
-			// 		{   
-			// 			target_adjust_x = 0.0;
-			// 			y = -0.68;
-			// 			target_adjust_z = 0.0;
-			// 		}
-			// 		break;
-			// 	}
-			// 	case 12: // 牛奶
-			// 	{
-			// 		if (y < -0.7) // too far
-			// 		{
-			// 			target_adjust_x = 0.01;
-			// 			y = -0.68;
-			// 			target_adjust_z = 0.0;
-			// 		}
-			// 		if (y > -0.58) // too close
-			// 		{   
-			// 			target_adjust_x = 0.01;
-			// 			y = -0.68;
-			// 			target_adjust_z = 0.0;
-			// 		}
-			// 		break;
-			// 	}
-			// 	case 0: // 书
-			// 	{
-			// 		if (y < -0.75) // too far
-			// 		{
-			// 			target_adjust_x = 0.0;
-			// 			y = -0.7;
-			// 			target_adjust_z = 0.0;
-			// 		}
-			// 		if (y > -0.58) // too close
-			// 		{   
-			// 			target_adjust_x = 0.0;
-			// 			y = -0.7;
-			// 			target_adjust_z = 0.0;
-			// 		}
-			// 		break;
-			// 	}
-			// 	case 13: // 果冻
-			// 	{
-			// 		if (y < -0.7) // too far
-			// 		{
-			// 			target_adjust_x = 0.02;
-			// 			y = -0.68;
-			// 			target_adjust_z = 0.0;
-			// 		}
-			// 		if (y > -0.58) // too close
-			// 		{   
-			// 			target_adjust_x = 0.02;
-			// 			y = -0.68;
-			// 			target_adjust_z = 0.0;
-			// 		}
-			// 		break;
-			// 	}
-			// 	case 11: // 磨牙棒
-			// 	{
-			// 		if (y < -0.7) // too far
-			// 		{
-			// 			target_adjust_x = 0.0;
-			// 			y = -0.68;
-			// 			// target_adjust_z = -0.02;
-			// 		}
-			// 		if (y > -0.58) // too close
-			// 		{   
-			// 			target_adjust_x = 0.0;
-			// 			y = -0.65;
-			// 			// target_adjust_z = -0.02;
-			// 		}
-			// 		target_adjust_z = -0.03;  
-			// 		break;
-			// 	}
-			// 	case 16: // 水杯
-			// 	{
-			// 		if (y < -0.7) // too far
-			// 		{
-			// 			target_adjust_x = 0.02;
-			// 			y = -0.68;
-			// 			target_adjust_z = 0.0;
-			// 		}
-			// 		if (y > -0.58) // too close
-			// 		{   
-			// 			target_adjust_x = 0.02;
-			// 			y = -0.68;
-			// 			target_adjust_z = 0.0;
-			// 		}
-			// 		break;
-			// 	}
-			// }
 			// TODO
 			// correction for z axis
 			if (z < (DESK_HEIGHT_MIDDLE - 0.1)) // 0.6 - 0.41 = 0.19
@@ -414,31 +181,23 @@ class notice_pub_sub
 
 			std::cout << "Current task information, ID:" << id << ", name:" << current_target_info.header.target_name
 			          << ", grasp type:" << current_target_info.header.grasp_type << std::endl;
-			std::cout << "Original object pose form kinect : (x,y,z)" << x << " " << y << " " << z << std::endl;
+			std::cout << "Object pose form kinect : (x,y,z)" << x << " " << y << " " << z << std::endl;
 
 			if (current_target_info.header.grasp_type == SWEEP && x <= 0.5 && x > 0.1 && y <= -0.40 && y > -0.80 &&
 			    z >= -0.10)
 			{
-				sweep_pose.position.x = x + target_adjust_x;
-				sweep_pose.position.y = y + target_adjust_y;
+				sweep_pose.position.x = x;
+				sweep_pose.position.y = y + 0.065;
 				sweep_pose.position.z = z;
 				arm_start_sweep_flag  = true;
 			}
 			if (current_target_info.header.grasp_type == SUCK && x <= 0.5 && x > 0.1 && y <= -0.40 && y > -0.80 &&
 			    z >= -0.10)
 			{
-				suck_pose.position.x = x + target_adjust_x;
-				suck_pose.position.y = y + target_adjust_y - 0.04;
+				suck_pose.position.x = x;
+				suck_pose.position.y = y + 0.02;
 				suck_pose.position.z = z;
 				arm_start_suck_flag  = true;
-			}
-			if (notice_message.data[5] > 1)
-			{
-				move_to_scan_pose_flag = false;
-			}
-			if (notice_message.data[6] == 8 || notice_message.data[6] == 13 || notice_message.data[6] == 18 || notice_message.data[6] == 23)
-			{
-				early_terminate_flag = true;
 			}
 		}
 
@@ -500,13 +259,13 @@ void poseInit()
 	// home_pose_low.orientation = sweep_pose.orientation;
 	home_pose_low.position.x = 0.18;
 	home_pose_low.position.y = -0.3;
-	home_pose_low.position.z = DESK_HEIGHT_LOW + 0.3;
+	home_pose_low.position.z = DESK_HEIGHT_LOW + 0.4;
 
 	home_pose = home_pose_high; // Default start home pose is high
 
 	// box_pose.orientation = suck_pose.orientation;
 	box_pose.position.x = 0.23;
-	box_pose.position.y = -0.35;
+	box_pose.position.y = -0.3;
 	box_pose.position.z = 0.4;
 }
 
@@ -545,11 +304,11 @@ int main(int argc, char **argv)
 	double x = 0;
 	double y = 0;
 	double z = 0;
-	double R = 90;
-	double P = 0.1;
-	double Y = 0.1;
+	double R = 85;
+	double P = 5;
+	double Y = 5;
 	motion_planner.cartesionPathPlanner(x, y, z, R, P, Y); // Adjust orientation
-	motion_planner.setAbsoluteJointValueTarget(0, 4.815);
+	motion_planner.setJointValueTarget(0, 1.0);
 
 	int loop_cnt   = 0;
 	int wait_count = 0;
@@ -565,6 +324,7 @@ int main(int argc, char **argv)
 		// sweep mode
 		if (arm_start_sweep_flag)
 		{
+			double back_low_y = 0;
 			std::cout << "-----------------------------------------------" << std::endl;
 			std::cout << "\nStart sweep objects from shelf/desk\n" << std::endl;
 			std::cout << "-----------------------------------------------" << std::endl;
@@ -575,7 +335,7 @@ int main(int argc, char **argv)
 			notice_test.notice_pub_sub_pulisher(notice_data);
 
 			// move back to home pose
-			motion_planner.setAbsoluteJointValueTarget(0, 3.815);
+			motion_planner.setJointValueTarget(0, -1.0);
 
 			// 0. home_pose_start pose
 
@@ -583,9 +343,10 @@ int main(int argc, char **argv)
 			{
 				case LOW:
 					home_pose           = home_pose_low;
-					current_desk_height = DESK_HEIGHT_LOW;
+					current_desk_height = DESK_HEIGHT_LOW + 0.02;
+					back_low_y          = -0.05;
 					// motion_planner.cartesionPathPlanner(0.05,-0.1, -0.15);
-					R = 92;
+					R = 95;
 					P = 5;
 					Y = 2;
 					std::cout << "\nhome_pose_low\n" << std::endl;
@@ -603,11 +364,11 @@ int main(int argc, char **argv)
 
 				case HIGH:
 					home_pose           = home_pose_high;
-					current_desk_height = DESK_HEIGHT_HIGH - 0.015;
+					current_desk_height = DESK_HEIGHT_HIGH;
 					// motion_planner.cartesionPathPlanner(0.05, -0.1, 0.2);
 					R = 85;
 					P = 5;
-					Y = 0.5;
+					Y = 2;
 					std::cout << "\nhome_pose_high\n" << std::endl;
 					break;
 			}
@@ -618,13 +379,13 @@ int main(int argc, char **argv)
 			cout << "Relative Cartesian distance:" << x << " " << y << " " << z << endl;
 			//   motion_planner.confirmToAct(home_pose, current_pose);
 
-			// motion_planner.cartesionPathPlanner(x, y, z, R, P, Y);
+			motion_planner.cartesionPathPlanner(x, y, z, R, P, Y);
 
 			// 1. presweep
 			pose_name                = "PRESWEEP";
 			presweep_pose            = sweep_pose; // sweep pose is the target pose from kinect
-			presweep_pose.position.y = POST_SWEEP_Y;
-			presweep_pose.position.z = current_desk_height + current_target_info.shape_info.height + PRE_SWEEP_CENTER_TO_DESK;
+			presweep_pose.position.y = POST_SWEEP_Y + back_low_y;
+			presweep_pose.position.z = current_desk_height + current_target_info.shape_info.height + 0.15;
 
 			current_pose = motion_planner.getCurrentPoseFromDriver();
 			x            = presweep_pose.position.x - current_pose.position.x;
@@ -633,7 +394,9 @@ int main(int argc, char **argv)
 			cout << x << " " << y << " " << z << endl;
 			motion_planner.confirmToAct(current_pose, presweep_pose, pose_name);
 			motion_planner.cartesionPathPlanner(x, y, z, R, P, Y);
+			// motion_planner.cartesionPathPlanner(x, y, z);
 			motion_planner.confirmToAct();
+			// motion_planner.moveLineTarget(pose1);
 
 			// 2. move forward
 			geometry_msgs::Pose pose2;
@@ -654,7 +417,7 @@ int main(int argc, char **argv)
 			// 3. move down
 			geometry_msgs::Pose pose3;
 			pose3            = pose2;
-			pose3.position.z = current_desk_height + SWEEP_CENTER_TO_DESK - 0.02 + target_adjust_z;
+			pose3.position.z = current_desk_height + SWEEP_CENTER_TO_DESK;
 			pose_name        = "DOWN";
 			current_pose     = motion_planner.getCurrentPoseFromDriver();
 			x                = pose3.position.x - current_pose.position.x;
@@ -669,7 +432,7 @@ int main(int argc, char **argv)
 			// 4. move back
 			geometry_msgs::Pose pose4;
 			pose4            = pose3;
-			pose4.position.y = POST_SWEEP_Y;
+			pose4.position.y = POST_SWEEP_Y + back_low_y;
 			pose_name        = "BACK";
 			current_pose     = motion_planner.getCurrentPoseFromDriver();
 			x                = pose4.position.x - current_pose.position.x;
@@ -681,63 +444,36 @@ int main(int argc, char **argv)
 			// motion_planner.cartesionPathPlanner(x, y, z);
 			motion_planner.confirmToAct();
 
-			if (early_terminate_flag)
-			{
-				// notice main loop that sweep task finished
-				notice_test.notice_data_clear(&notice_data);
-				notice_data.id      = 4;
-				notice_data.data[0] = 15;
-				notice_data.data[1] = current_target_info.header.target_id;
-				notice_test.notice_pub_sub_pulisher(notice_data);
-				
-				// 5. move to home pose
-				pose_name = "HOME POSE";
-				current_pose = motion_planner.getCurrentPoseFromDriver();
-				x            = home_pose.position.x - current_pose.position.x;
-				y            = home_pose.position.y - current_pose.position.y;
-				z            = home_pose.position.z - current_pose.position.z;
-				cout << x << " " << y << " " << z << endl;
-				motion_planner.confirmToAct(current_pose, home_pose, pose_name);
-				motion_planner.cartesionPathPlanner(x, y, z, R, P, Y);
+			// 5. move to home pose
+			pose_name = "HOME POSE";
+			// if (home_pose.position.z == home_pose_low.position.z)
+			// {
+			// 	x = 0;
+			// 	y = 0;
+			// 	z = 0.1;
+			// 	motion_planner.cartesionPathPlanner(x, y, z, R, P, Y);
+			// 	// motion_planner.cartesionPathPlanner(x, y, z);
+			// 	motion_planner.confirmToAct();
+			// }
+			current_pose = motion_planner.getCurrentPoseFromDriver();
+			x            = home_pose.position.x - current_pose.position.x;
+			y            = home_pose.position.y - current_pose.position.y;
+			z            = home_pose.position.z - current_pose.position.z;
+			cout << x << " " << y << " " << z << endl;
+			motion_planner.confirmToAct(current_pose, home_pose, pose_name);
+			motion_planner.cartesionPathPlanner(x, y, z, R, P, Y);
 
-				cout << "Move to scan pose ..." << endl;
-				motion_planner.setAbsoluteJointValueTarget(0, 4.815);
-				arm_start_sweep_flag = false;
-			}
-			else
-			{
-				// 5. move to home pose
-				pose_name = "HOME POSE";
-				current_pose = motion_planner.getCurrentPoseFromDriver();
-				x            = home_pose.position.x - current_pose.position.x;
-				y            = home_pose.position.y - current_pose.position.y;
-				z            = home_pose.position.z - current_pose.position.z;
-				cout << x << " " << y << " " << z << endl;
-				motion_planner.confirmToAct(current_pose, home_pose, pose_name);
-				motion_planner.cartesionPathPlanner(x, y, z, R, P, Y);
+			// notice main loop that sweep task finished
+			notice_test.notice_data_clear(&notice_data);
+			notice_data.id      = 4;
+			notice_data.data[0] = 15;
+			notice_data.data[1] = current_target_info.header.target_id;
+			notice_test.notice_pub_sub_pulisher(notice_data);
+			arm_start_sweep_flag = false;
 
-				 if (!move_to_scan_pose_flag)
-				{
-					cout << "Move to scan pose ..." << endl;
-					motion_planner.setAbsoluteJointValueTarget(0, 3.815);
-					move_to_scan_pose_flag = true;
-				}
-				else
-				{
-					motion_planner.setAbsoluteJointValueTarget(0, 4.815);
-				}
-				
-				// notice main loop that sweep task finished
-				notice_test.notice_data_clear(&notice_data);
-				notice_data.id      = 4;
-				notice_data.data[0] = 15;
-				notice_data.data[1] = current_target_info.header.target_id;
-				notice_test.notice_pub_sub_pulisher(notice_data);
-				arm_start_sweep_flag = false;
-			
-			}
+			cout << "Move to scan pose ..." << endl;
+			motion_planner.setJointValueTarget(0, 1.0);
 
-			
 			std::cout << "-----------------------------------------------" << std::endl;
 			std::cout << "Sweep task finished" << std::endl;
 			std::cout << "-----------------------------------------------" << std::endl;
@@ -755,18 +491,18 @@ int main(int argc, char **argv)
 			notice_test.notice_pub_sub_pulisher(notice_data);
 
 			// move to home pose (from scan pose)
-			motion_planner.setAbsoluteJointValueTarget(0, 3.815);
+			motion_planner.setJointValueTarget(0, -1.0);
 
 			// 0. home_pose_start pose
 			switch (current_target_info.header.table_type)
 			{
 				case LOW:
 					home_pose           = home_pose_low;
-					current_desk_height = DESK_HEIGHT_LOW - 0.01;
+					current_desk_height = DESK_HEIGHT_LOW;
 					// motion_planner.cartesionPathPlanner(0.05,-0.1, -0.15);
 					R = 95;
 					P = 95;
-					Y = 4;
+					Y = 2;
 					std::cout << "\nhome_pose_low\n" << std::endl;
 					break;
 
@@ -782,11 +518,11 @@ int main(int argc, char **argv)
 
 				case HIGH:
 					home_pose           = home_pose_high;
-					current_desk_height = DESK_HEIGHT_HIGH - 0.02;
+					current_desk_height = DESK_HEIGHT_HIGH;
 					// motion_planner.cartesionPathPlanner(0.05, -0.1, 0.2);
 					R = 85;
 					P = 95;
-					Y = -3;
+					Y = 2;
 					std::cout << "\nhome_pose_high\n" << std::endl;
 					break;
 			}
@@ -797,29 +533,29 @@ int main(int argc, char **argv)
 			cout << "Relative Cartesian distance:" << x << " " << y << " " << z << endl;
 			//   motion_planner.confirmToAct(current_pose, home_pose_start);
 
-			// motion_planner.cartesionPathPlanner(0, 0, 0, R, P, Y);
+			motion_planner.cartesionPathPlanner(0, 0, 0, R, P, Y);
 			motion_planner.cartesionPathPlanner(x, y, z, R, P, Y);
 
 			// 1. pre-suck
-			// presuck_pose = suck_pose; // sweep pose is the target pose from kinect
-			// pose_name    = "PRESUCK";
+			presuck_pose = suck_pose; // sweep pose is the target pose from kinect
+			pose_name    = "PRESUCK";
 
-			// presuck_pose.position.y += PRESUCK_OFFSET;
-			// presuck_pose.position.z = current_desk_height + current_target_info.shape_info.height + 0.13;
+			presuck_pose.position.y += PRESUCK_OFFSET;
+			presuck_pose.position.z = current_desk_height + current_target_info.shape_info.height + 0.13;
 
-			// current_pose = motion_planner.getCurrentPoseFromDriver();
-			// x            = presuck_pose.position.x - current_pose.position.x;
-			// y            = presuck_pose.position.y - current_pose.position.y;
-			// z            = presuck_pose.position.z - current_pose.position.z;
-			// cout << x << " " << y << " " << z << endl;
-			// motion_planner.confirmToAct(current_pose, presuck_pose, pose_name);
-			// motion_planner.cartesionPathPlanner(x, y, z, R, P, Y);
-			// motion_planner.confirmToAct();
+			current_pose = motion_planner.getCurrentPoseFromDriver();
+			x            = presuck_pose.position.x - current_pose.position.x;
+			y            = presuck_pose.position.y - current_pose.position.y;
+			z            = presuck_pose.position.z - current_pose.position.z;
+			cout << x << " " << y << " " << z << endl;
+			motion_planner.confirmToAct(current_pose, presuck_pose, pose_name);
+			motion_planner.cartesionPathPlanner(x, y, z, R, P, Y);
+			motion_planner.confirmToAct();
 
 			// 2. move forward
 			geometry_msgs::Pose pose2;
-			pose2            = suck_pose;
-			pose2.position.z = current_desk_height + current_target_info.shape_info.height + PRE_SUCK_CENTER_TO_SURFACE;
+			pose2            = presuck_pose;
+			pose2.position.y = suck_pose.position.y;
 			pose_name        = "FORWARD";
 
 			current_pose = motion_planner.getCurrentPoseFromDriver();
@@ -877,7 +613,7 @@ int main(int argc, char **argv)
 			geometry_msgs::Pose pose3;
 			pose3            = pose2;
 			pose3.position.z = current_desk_height + current_target_info.shape_info.height +
-			                   SUCK_CENTER_TO_SURFACE - 0.01 + target_adjust_z; // 0.06:中心补偿，吸取面到中心
+			                   SUCK_CENTER_TO_DESK; // 0.06:中心补偿，吸取面到中心
 			pose_name    = "DOWN";
 			current_pose = motion_planner.getCurrentPoseFromDriver();
 			x            = pose3.position.x - current_pose.position.x;
@@ -890,41 +626,41 @@ int main(int argc, char **argv)
 			motion_planner.confirmToAct();
 
 			// 5. move up
-			// geometry_msgs::Pose pose4;
-			// pose4 = pose3;
-			// pose4.position.z += 0.10;
-			// pose_name    = "UP";
-			// current_pose = motion_planner.getCurrentPoseFromDriver();
-			// x            = pose4.position.x - current_pose.position.x;
-			// y            = pose4.position.y - current_pose.position.y;
-			// z            = pose4.position.z - current_pose.position.z;
+			geometry_msgs::Pose pose4;
+			pose4 = pose3;
+			pose4.position.z += 0.06;
+			pose_name    = "UP";
+			current_pose = motion_planner.getCurrentPoseFromDriver();
+			x            = pose4.position.x - current_pose.position.x;
+			y            = pose4.position.y - current_pose.position.y;
+			z            = pose4.position.z - current_pose.position.z;
 
-			// cout << x << " " << y << " " << z << endl;
-			// motion_planner.confirmToAct(current_pose, pose4, pose_name);
-			// motion_planner.cartesionPathPlanner(x, y, z, R, P, Y);
-			// motion_planner.confirmToAct();
+			cout << x << " " << y << " " << z << endl;
+			motion_planner.confirmToAct(current_pose, pose4, pose_name);
+			motion_planner.cartesionPathPlanner(x, y, z, R, P, Y);
+			motion_planner.confirmToAct();
 
 			// 6. move back
-			// geometry_msgs::Pose pose5;
-			// pose5 = pose4;
-			// pose5.position.y += PRESUCK_OFFSET;
-			// pose_name    = "BACK";
-			// current_pose = motion_planner.getCurrentPoseFromDriver();
-			// x            = pose5.position.x - current_pose.position.x;
-			// y            = pose5.position.y - current_pose.position.y;
-			// z            = pose5.position.z - current_pose.position.z;
+			geometry_msgs::Pose pose5;
+			pose5 = pose4;
+			pose5.position.y += PRESUCK_OFFSET;
+			pose_name    = "BACK";
+			current_pose = motion_planner.getCurrentPoseFromDriver();
+			x            = pose5.position.x - current_pose.position.x;
+			y            = pose5.position.y - current_pose.position.y;
+			z            = pose5.position.z - current_pose.position.z;
 
-			// cout << x << " " << y << " " << z << endl;
-			// motion_planner.confirmToAct(current_pose, pose5, pose_name);
-			// motion_planner.cartesionPathPlanner(x, y, z, R, P, Y);
-			// motion_planner.confirmToAct();
+			cout << x << " " << y << " " << z << endl;
+			motion_planner.confirmToAct(current_pose, pose5, pose_name);
+			motion_planner.cartesionPathPlanner(x, y, z, R, P, Y);
+			motion_planner.confirmToAct();
 
 			// 6. move to box(above)
 			pose_name    = "BOX POSE";
 			current_pose = motion_planner.getCurrentPoseFromDriver();
 			x            = box_pose.position.x - current_pose.position.x;
 			y            = box_pose.position.y - current_pose.position.y;
-			z            = 0.05;
+			z            = 0.0;
 
 			cout << x << " " << y << " " << z << endl;
 			motion_planner.confirmToAct(current_pose, box_pose, pose_name);
@@ -937,61 +673,27 @@ int main(int argc, char **argv)
 			notice_data.data[0] = 9;
 			notice_test.notice_pub_sub_pulisher(notice_data);
 			arm_start_sweep_flag = false;
-			ros::Duration(0.5).sleep();
+			ros::Duration(1).sleep();
 
-			if (early_terminate_flag)
-			{
-				// notice main loop that suck task finished
-				notice_test.notice_data_clear(&notice_data);
-				notice_data.id      = 4;
-				notice_data.data[0] = 15;
-				notice_data.data[1] = current_target_info.header.target_id;
-				notice_test.notice_pub_sub_pulisher(notice_data);
+			// 8. move to home
+			pose_name    = "SUCK HOME POSE";
+			current_pose = motion_planner.getCurrentPoseFromDriver();
+			x            = home_pose.position.x - current_pose.position.x;
+			y            = home_pose.position.y - current_pose.position.y;
+			z            = home_pose.position.z - current_pose.position.z;
+			cout << x << " " << y << " " << z << endl;
+			motion_planner.confirmToAct(current_pose, home_pose, pose_name);
+			motion_planner.cartesionPathPlanner(x, y, z, R, P, Y);
 
-				// 8. move to home
-				pose_name    = "SUCK HOME POSE";
-				current_pose = motion_planner.getCurrentPoseFromDriver();
-				x            = home_pose.position.x - current_pose.position.x;
-				y            = home_pose.position.y - current_pose.position.y;
-				z            = home_pose.position.z - current_pose.position.z;
-				cout << x << " " << y << " " << z << endl;
-				motion_planner.confirmToAct(current_pose, home_pose, pose_name);
-				motion_planner.cartesionPathPlanner(x, y, z, R, P, Y);
+			// notice main loop that suck task finished
+			notice_test.notice_data_clear(&notice_data);
+			notice_data.id      = 4;
+			notice_data.data[0] = 15;
+			notice_data.data[1] = current_target_info.header.target_id;
+			notice_test.notice_pub_sub_pulisher(notice_data);
+			arm_start_suck_flag = false;
 
-				motion_planner.setAbsoluteJointValueTarget(0, 4.815);
-				arm_start_suck_flag = false;
-
-			}
-			else
-			{
-				// 8. move to home
-				pose_name    = "SUCK HOME POSE";
-				current_pose = motion_planner.getCurrentPoseFromDriver();
-				x            = home_pose.position.x - current_pose.position.x;
-				y            = home_pose.position.y - current_pose.position.y;
-				z            = home_pose.position.z - current_pose.position.z;
-				cout << x << " " << y << " " << z << endl;
-				motion_planner.confirmToAct(current_pose, home_pose, pose_name);
-				motion_planner.cartesionPathPlanner(x, y, z, R, P, Y);
-
-				if (!move_to_scan_pose_flag)
-				{
-					motion_planner.setAbsoluteJointValueTarget(0, 3.815);
-					move_to_scan_pose_flag = true;
-				}
-				else
-				{
-					motion_planner.setAbsoluteJointValueTarget(0, 4.815);					
-				}
-
-				// notice main loop that suck task finished
-				notice_test.notice_data_clear(&notice_data);
-				notice_data.id      = 4;
-				notice_data.data[0] = 15;
-				notice_data.data[1] = current_target_info.header.target_id;
-				notice_test.notice_pub_sub_pulisher(notice_data);
-				arm_start_suck_flag = false;
-			}
+			motion_planner.setJointValueTarget(0, 1.0);
 
 			std::cout << "-----------------------------------------------" << std::endl;
 			std::cout << "Suck task finished" << std::endl;

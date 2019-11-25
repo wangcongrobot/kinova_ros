@@ -28,7 +28,7 @@ int main(int argc, char** argv)
     // just the origon of the frame
     ee_point.point.x = 0.0;
     ee_point.point.y = 0.0;
-    ee_point.point.z = -0.21; // translate form arm_6_link to gripper frame
+    ee_point.point.z = -0.18; // translate form arm_6_link to gripper frame
 
     ros::Rate rate(30);
     while (n.ok()) {

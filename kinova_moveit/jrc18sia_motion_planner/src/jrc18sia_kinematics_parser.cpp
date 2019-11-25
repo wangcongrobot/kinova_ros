@@ -8,7 +8,7 @@ Parser::Parser()
     double d3 = 0.2073;	// Front arm length
     double d4 = 0.0741;	// First wrist length
     double d5 = 0.0741;	// Second wrist length
-    double d6 = 0.1600;	// Wrist to center of the hand
+    double d6 = 0.1600;	// Wrist to center of the hand 20181215 from 0.16 to 0.21
     double e2 = 0.0098;	// Joint 3-4 lateral offset
 
     double aa = 0.5235987755;
@@ -23,11 +23,11 @@ Parser::Parser()
     // DH is DH model of the manipulator, p4. Rows are DOF, cols are alpha/a/theta/d.
     // The angle uses radian, the distance uses mm.
     Eigen::MatrixXd dh(6, 4);
-    dh << Pi / 2,  0, 0,   d1, 
-              Pi, d2, 0,   0, 
-          Pi / 2,  0, 0, -e2, 
-          2 * aa,  0, 0, -d4b, 
-          2 * aa,  0, 0, -d5b, 
+    dh << Pi / 2,  0, 0,   d1,
+              Pi, d2, 0,   0,
+          Pi / 2,  0, 0, -e2,
+          2 * aa,  0, 0, -d4b,
+          2 * aa,  0, 0, -d5b,
               Pi,  0, 0, -d6b;
 
     this->dh = dh;

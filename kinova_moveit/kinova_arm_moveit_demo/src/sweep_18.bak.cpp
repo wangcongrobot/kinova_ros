@@ -68,10 +68,6 @@ geometry_msgs::Pose current_pose; // used to indicate arm state
 JRCTarget  jrc_targets;         // objects class
 TargetInfo current_target_info; // Current target from kinect
 
-double target_adjust_x;
-double target_adjust_y;
-double target_adjust_z;
-
 /***************************NOTICE CLASS****************************/
 typedef int ErrorCode;
 class notice_pub_sub
@@ -110,7 +106,6 @@ class notice_pub_sub
 		notice_handle.getParam("calibration_adjust_z", calibration_adjust_z);
 		std::cout << "calibration_adjust : " << calibration_adjust_x << " " << calibration_adjust_y << " "
 		          << calibration_adjust_z << std::endl;
-
 	}
 
 	void notice_pub_sub_pulisher(id_data_msgs::ID_Data id_data) { notice_publisher.publish(id_data); }
@@ -131,9 +126,6 @@ class notice_pub_sub
 
 	void notice_msgCallback(const id_data_msgs::ID_Data::ConstPtr &notice_msg)
 	{
-		target_adjust_x = 0.0;
-		target_adjust_y = 0.0;
-		target_adjust_z = 0.0;
 
 		id_data_msgs::ID_Data notice_message;
 		notice_message.id = 0;
@@ -170,224 +162,20 @@ class notice_pub_sub
 			
 			switch (id)
 			{
-				case 9: // 香肠
-					if (y <= -0.65)
-					{
-						target_adjust_x = 0.0;
-						y = -0.63;
-						// target_adjust_y = 0.10;
-						target_adjust_z = -0.03;
-						// y += 0.07;
-						break;
-					}
-				case 14: // 药瓶
-					{
-						y = -0.60;
-						break;
-					}
-				case 6: // 苏打饼干
+				case 9:
+					if (y <= -0.7)
+						{y += 0.07;break;}
+				case 14:
+					if (y <= -0.7)
+						{y += 0.07;break;}
+				case 6:
 					if (y >= -0.6)
-					{
-						target_adjust_x = 0.0;
-						target_adjust_y = -0.05;
-						target_adjust_z = 0.0;						
-						// y -= 0.05;
-						break;
-					}
-				case 12: // 牛奶
+						{y -= 0.05;break;}
+				case 12:
 					if (y >= -0.6)
-					{
-						target_adjust_x = 0.025;
-						target_adjust_y = -0.03;
-						target_adjust_z = 0.0;
-						// y -= 0.03;
-						break;
-					}
-				case 11: // 磨牙棒
-					if (y >= -0.6)
-					{
-						target_adjust_x = 0.0;
-						target_adjust_y = -0.03;
-						target_adjust_z = -0.04;
-						// y -= 0.03;
-						break;
-					}
-				case 13: // 果冻
-					if (y >= -0.6)
-					{
-						target_adjust_x = 0.03;
-						target_adjust_y = 0.0;
-						target_adjust_z = 0.0;
-						// y -= 0.03;
-						break;
-					}
+						{y -= 0.03;break;}
 			}
-						
-			// switch (id)
-			// {
-			// 	case 6: // 饼干
-			// 	{
-			// 		if (y < -0.7) // too far
-			// 		{
-			// 			target_adjust_x = 0.0;
-			// 			y = -0.68;
-			// 			target_adjust_z = 0.0;
-			// 		}
-			// 		if (y > -0.58) // too close
-			// 		{   
-			// 			target_adjust_x = 0.0;
-			// 			target_adjust_y = -0.05;
-			// 			target_adjust_z = 0.0;
-			// 		}
-			// 		break;
-			// 	}
-			// 	case 10: // 牙膏
-			// 	{
-			// 		if (y < -0.75) // too far
-			// 		{
-			// 			target_adjust_x = 0.0;
-			// 			y = -0.68;
-			// 			target_adjust_z = 0.0;
-			// 		}
-			// 		if (y > -0.58) // too close
-			// 		{   
-			// 			target_adjust_x = 0.0;
-			// 			y = -0.68;
-			// 			target_adjust_z = 0.0;
-			// 		}
-			// 		break;
-			// 	}
-			// 	case 14:  // 药片
-			// 	{
-			// 		if (y < -0.68) // too far
-			// 		{
-			// 			target_adjust_x = 0.0;
-			// 			y = -0.65;
-			// 			target_adjust_z = 0.0;
-			// 		}
-			// 		if (y > -0.58) // too close
-			// 		{   
-			// 			target_adjust_x = 0.0;
-			// 			y = -0.65;
-			// 			target_adjust_z = 0.0;
-			// 		}
-			// 		break;
-			// 	}
-			// 	case 9: // 火腿
-			// 	{
-			// 		if (y < -0.68) // too far
-			// 		{
-			// 			target_adjust_x = 0.0;
-			// 			y = -0.65;
-			// 			// target_adjust_z = 0.0;
-			// 		}
-			// 		if (y > -0.58) // too close
-			// 		{   
-			// 			target_adjust_x = 0.0;
-			// 			y = -0.65;
-			// 			// target_adjust_z = 0.0;
-			// 		}
-			// 		target_adjust_z = -0.03;
-			// 		break;
-			// 	}
-			// 	case 18: // 香水
-			// 	{
-			// 		if (y < -0.7) // too far
-			// 		{
-			// 			target_adjust_x = 0.0;
-			// 			y = -0.68;
-			// 			target_adjust_z = 0.0;
-			// 		}
-			// 		if (y > -0.58) // too close
-			// 		{   
-			// 			target_adjust_x = 0.0;
-			// 			y = -0.68;
-			// 			target_adjust_z = 0.0;
-			// 		}
-			// 		break;
-			// 	}
-			// 	case 12: // 牛奶
-			// 	{
-			// 		if (y < -0.7) // too far
-			// 		{
-			// 			target_adjust_x = 0.01;
-			// 			y = -0.68;
-			// 			target_adjust_z = 0.0;
-			// 		}
-			// 		if (y > -0.58) // too close
-			// 		{   
-			// 			target_adjust_x = 0.01;
-			// 			y = -0.68;
-			// 			target_adjust_z = 0.0;
-			// 		}
-			// 		break;
-			// 	}
-			// 	case 0: // 书
-			// 	{
-			// 		if (y < -0.75) // too far
-			// 		{
-			// 			target_adjust_x = 0.0;
-			// 			y = -0.7;
-			// 			target_adjust_z = 0.0;
-			// 		}
-			// 		if (y > -0.58) // too close
-			// 		{   
-			// 			target_adjust_x = 0.0;
-			// 			y = -0.7;
-			// 			target_adjust_z = 0.0;
-			// 		}
-			// 		break;
-			// 	}
-			// 	case 13: // 果冻
-			// 	{
-			// 		if (y < -0.7) // too far
-			// 		{
-			// 			target_adjust_x = 0.02;
-			// 			y = -0.68;
-			// 			target_adjust_z = 0.0;
-			// 		}
-			// 		if (y > -0.58) // too close
-			// 		{   
-			// 			target_adjust_x = 0.02;
-			// 			y = -0.68;
-			// 			target_adjust_z = 0.0;
-			// 		}
-			// 		break;
-			// 	}
-			// 	case 11: // 磨牙棒
-			// 	{
-			// 		if (y < -0.7) // too far
-			// 		{
-			// 			target_adjust_x = 0.0;
-			// 			y = -0.68;
-			// 			// target_adjust_z = -0.02;
-			// 		}
-			// 		if (y > -0.58) // too close
-			// 		{   
-			// 			target_adjust_x = 0.0;
-			// 			y = -0.65;
-			// 			// target_adjust_z = -0.02;
-			// 		}
-			// 		target_adjust_z = -0.03;  
-			// 		break;
-			// 	}
-			// 	case 16: // 水杯
-			// 	{
-			// 		if (y < -0.7) // too far
-			// 		{
-			// 			target_adjust_x = 0.02;
-			// 			y = -0.68;
-			// 			target_adjust_z = 0.0;
-			// 		}
-			// 		if (y > -0.58) // too close
-			// 		{   
-			// 			target_adjust_x = 0.02;
-			// 			y = -0.68;
-			// 			target_adjust_z = 0.0;
-			// 		}
-			// 		break;
-			// 	}
-			// }
+			
 			// TODO
 			// correction for z axis
 			if (z < (DESK_HEIGHT_MIDDLE - 0.1)) // 0.6 - 0.41 = 0.19
@@ -419,16 +207,16 @@ class notice_pub_sub
 			if (current_target_info.header.grasp_type == SWEEP && x <= 0.5 && x > 0.1 && y <= -0.40 && y > -0.80 &&
 			    z >= -0.10)
 			{
-				sweep_pose.position.x = x + target_adjust_x;
-				sweep_pose.position.y = y + target_adjust_y;
+				sweep_pose.position.x = x;
+				sweep_pose.position.y = y + 0.03;
 				sweep_pose.position.z = z;
 				arm_start_sweep_flag  = true;
 			}
 			if (current_target_info.header.grasp_type == SUCK && x <= 0.5 && x > 0.1 && y <= -0.40 && y > -0.80 &&
 			    z >= -0.10)
 			{
-				suck_pose.position.x = x + target_adjust_x;
-				suck_pose.position.y = y + target_adjust_y - 0.04;
+				suck_pose.position.x = x;
+				suck_pose.position.y = y;
 				suck_pose.position.z = z;
 				arm_start_suck_flag  = true;
 			}
@@ -500,7 +288,7 @@ void poseInit()
 	// home_pose_low.orientation = sweep_pose.orientation;
 	home_pose_low.position.x = 0.18;
 	home_pose_low.position.y = -0.3;
-	home_pose_low.position.z = DESK_HEIGHT_LOW + 0.3;
+	home_pose_low.position.z = DESK_HEIGHT_LOW + 0.4;
 
 	home_pose = home_pose_high; // Default start home pose is high
 
@@ -545,11 +333,11 @@ int main(int argc, char **argv)
 	double x = 0;
 	double y = 0;
 	double z = 0;
-	double R = 90;
-	double P = 0.1;
-	double Y = 0.1;
+	double R = 85;
+	double P = 5;
+	double Y = 5;
 	motion_planner.cartesionPathPlanner(x, y, z, R, P, Y); // Adjust orientation
-	motion_planner.setAbsoluteJointValueTarget(0, 4.815);
+	motion_planner.setJointValueTarget(0, 1.0);
 
 	int loop_cnt   = 0;
 	int wait_count = 0;
@@ -575,7 +363,7 @@ int main(int argc, char **argv)
 			notice_test.notice_pub_sub_pulisher(notice_data);
 
 			// move back to home pose
-			motion_planner.setAbsoluteJointValueTarget(0, 3.815);
+			motion_planner.setJointValueTarget(0, -1.0);
 
 			// 0. home_pose_start pose
 
@@ -583,7 +371,7 @@ int main(int argc, char **argv)
 			{
 				case LOW:
 					home_pose           = home_pose_low;
-					current_desk_height = DESK_HEIGHT_LOW;
+					current_desk_height = DESK_HEIGHT_LOW+ 0.01;
 					// motion_planner.cartesionPathPlanner(0.05,-0.1, -0.15);
 					R = 92;
 					P = 5;
@@ -603,11 +391,11 @@ int main(int argc, char **argv)
 
 				case HIGH:
 					home_pose           = home_pose_high;
-					current_desk_height = DESK_HEIGHT_HIGH - 0.015;
+					current_desk_height = DESK_HEIGHT_HIGH;
 					// motion_planner.cartesionPathPlanner(0.05, -0.1, 0.2);
 					R = 85;
 					P = 5;
-					Y = 0.5;
+					Y = 2;
 					std::cout << "\nhome_pose_high\n" << std::endl;
 					break;
 			}
@@ -654,7 +442,7 @@ int main(int argc, char **argv)
 			// 3. move down
 			geometry_msgs::Pose pose3;
 			pose3            = pose2;
-			pose3.position.z = current_desk_height + SWEEP_CENTER_TO_DESK - 0.02 + target_adjust_z;
+			pose3.position.z = current_desk_height + SWEEP_CENTER_TO_DESK - 0.02;
 			pose_name        = "DOWN";
 			current_pose     = motion_planner.getCurrentPoseFromDriver();
 			x                = pose3.position.x - current_pose.position.x;
@@ -701,7 +489,7 @@ int main(int argc, char **argv)
 				motion_planner.cartesionPathPlanner(x, y, z, R, P, Y);
 
 				cout << "Move to scan pose ..." << endl;
-				motion_planner.setAbsoluteJointValueTarget(0, 4.815);
+				motion_planner.setJointValueTarget(0, 1.0);
 				arm_start_sweep_flag = false;
 			}
 			else
@@ -716,16 +504,12 @@ int main(int argc, char **argv)
 				motion_planner.confirmToAct(current_pose, home_pose, pose_name);
 				motion_planner.cartesionPathPlanner(x, y, z, R, P, Y);
 
-				 if (!move_to_scan_pose_flag)
-				{
+				// if (move_to_scan_pose_flag)
+				// {
 					cout << "Move to scan pose ..." << endl;
-					motion_planner.setAbsoluteJointValueTarget(0, 3.815);
-					move_to_scan_pose_flag = true;
-				}
-				else
-				{
-					motion_planner.setAbsoluteJointValueTarget(0, 4.815);
-				}
+					motion_planner.setJointValueTarget(0, 1.0);
+
+				// }
 				
 				// notice main loop that sweep task finished
 				notice_test.notice_data_clear(&notice_data);
@@ -755,7 +539,7 @@ int main(int argc, char **argv)
 			notice_test.notice_pub_sub_pulisher(notice_data);
 
 			// move to home pose (from scan pose)
-			motion_planner.setAbsoluteJointValueTarget(0, 3.815);
+			motion_planner.setJointValueTarget(0, -1.0);
 
 			// 0. home_pose_start pose
 			switch (current_target_info.header.table_type)
@@ -782,11 +566,11 @@ int main(int argc, char **argv)
 
 				case HIGH:
 					home_pose           = home_pose_high;
-					current_desk_height = DESK_HEIGHT_HIGH - 0.02;
+					current_desk_height = DESK_HEIGHT_HIGH;
 					// motion_planner.cartesionPathPlanner(0.05, -0.1, 0.2);
 					R = 85;
 					P = 95;
-					Y = -3;
+					Y = 0.0;
 					std::cout << "\nhome_pose_high\n" << std::endl;
 					break;
 			}
@@ -877,7 +661,7 @@ int main(int argc, char **argv)
 			geometry_msgs::Pose pose3;
 			pose3            = pose2;
 			pose3.position.z = current_desk_height + current_target_info.shape_info.height +
-			                   SUCK_CENTER_TO_SURFACE - 0.01 + target_adjust_z; // 0.06:中心补偿，吸取面到中心
+			                   SUCK_CENTER_TO_SURFACE - 0.01; // 0.06:中心补偿，吸取面到中心
 			pose_name    = "DOWN";
 			current_pose = motion_planner.getCurrentPoseFromDriver();
 			x            = pose3.position.x - current_pose.position.x;
@@ -958,7 +742,7 @@ int main(int argc, char **argv)
 				motion_planner.confirmToAct(current_pose, home_pose, pose_name);
 				motion_planner.cartesionPathPlanner(x, y, z, R, P, Y);
 
-				motion_planner.setAbsoluteJointValueTarget(0, 4.815);
+				motion_planner.setJointValueTarget(0, 1.0);
 				arm_start_suck_flag = false;
 
 			}
@@ -974,15 +758,10 @@ int main(int argc, char **argv)
 				motion_planner.confirmToAct(current_pose, home_pose, pose_name);
 				motion_planner.cartesionPathPlanner(x, y, z, R, P, Y);
 
-				if (!move_to_scan_pose_flag)
-				{
-					motion_planner.setAbsoluteJointValueTarget(0, 3.815);
-					move_to_scan_pose_flag = true;
-				}
-				else
-				{
-					motion_planner.setAbsoluteJointValueTarget(0, 4.815);					
-				}
+				// if (move_to_scan_pose_flag)
+				// {
+					motion_planner.setJointValueTarget(0, 1.0);
+				// }
 
 				// notice main loop that suck task finished
 				notice_test.notice_data_clear(&notice_data);

@@ -170,34 +170,71 @@ class notice_pub_sub
 			
 			switch (id)
 			{
-				case 9: // 香肠
-					if (y <= -0.65)
-					{
-						target_adjust_x = 0.0;
-						y = -0.63;
-						// target_adjust_y = 0.10;
-						target_adjust_z = -0.03;
-						// y += 0.07;
-						break;
-					}
-				case 14: // 药瓶
-					{
-						y = -0.60;
-						break;
-					}
 				case 6: // 苏打饼干
+				{
 					if (y >= -0.6)
 					{
 						target_adjust_x = 0.0;
 						target_adjust_y = -0.05;
-						target_adjust_z = 0.0;						
-						// y -= 0.05;
+						target_adjust_z = 0
+					}
+					if (y <= -0.7)
+					{
+						target_adjust_x = 0.0;
+						y = -0.65;
+						target_adjust_z = 0.0;
+					}
+					break;
+				}
+				case 10: // 牙膏
+				{
+					if (y <= -0.75)
+					{
+						target_adjust_x = 0.0;
+						y = -0.68;
+						target_adjust_z = 0.0;
+					}
+					if (y >= -0.58)
+					{
+						target_adjust_x = 0.0;
+						y = -0.65;
+						target_adjust_z = 0.0;
+					}
+					break;
+				}
+
+				case 14: // 药瓶
+				{
+					if (y <= -0.68)
+					{
+						target_adjust_x = 0.0;
+						y = -0.65;
+						target_adjust_z = 0.0;
+					}
+					if (y >= -0.58)
+					{
+						target_adjust_x = 0.0;
+						y = -0.65;
+						target_adjust_z = 0.0;
+					}
+					break;
+				}
+
+				case 9: // 香肠
+				{
+					if (y <= -0.68)
+					{
+						target_adjust_x = 0.0;
+						y = -0.65;
+						target_adjust_z = -0.02;
 						break;
 					}
+				}
+
 				case 12: // 牛奶
 					if (y >= -0.6)
 					{
-						target_adjust_x = 0.025;
+						target_adjust_x = 0.0;
 						target_adjust_y = -0.03;
 						target_adjust_z = 0.0;
 						// y -= 0.03;
@@ -208,186 +245,21 @@ class notice_pub_sub
 					{
 						target_adjust_x = 0.0;
 						target_adjust_y = -0.03;
-						target_adjust_z = -0.04;
+						target_adjust_z = -0.03;
 						// y -= 0.03;
 						break;
 					}
 				case 13: // 果冻
 					if (y >= -0.6)
 					{
-						target_adjust_x = 0.03;
+						target_adjust_x = 0.02;
 						target_adjust_y = 0.0;
 						target_adjust_z = 0.0;
 						// y -= 0.03;
 						break;
 					}
 			}
-						
-			// switch (id)
-			// {
-			// 	case 6: // 饼干
-			// 	{
-			// 		if (y < -0.7) // too far
-			// 		{
-			// 			target_adjust_x = 0.0;
-			// 			y = -0.68;
-			// 			target_adjust_z = 0.0;
-			// 		}
-			// 		if (y > -0.58) // too close
-			// 		{   
-			// 			target_adjust_x = 0.0;
-			// 			target_adjust_y = -0.05;
-			// 			target_adjust_z = 0.0;
-			// 		}
-			// 		break;
-			// 	}
-			// 	case 10: // 牙膏
-			// 	{
-			// 		if (y < -0.75) // too far
-			// 		{
-			// 			target_adjust_x = 0.0;
-			// 			y = -0.68;
-			// 			target_adjust_z = 0.0;
-			// 		}
-			// 		if (y > -0.58) // too close
-			// 		{   
-			// 			target_adjust_x = 0.0;
-			// 			y = -0.68;
-			// 			target_adjust_z = 0.0;
-			// 		}
-			// 		break;
-			// 	}
-			// 	case 14:  // 药片
-			// 	{
-			// 		if (y < -0.68) // too far
-			// 		{
-			// 			target_adjust_x = 0.0;
-			// 			y = -0.65;
-			// 			target_adjust_z = 0.0;
-			// 		}
-			// 		if (y > -0.58) // too close
-			// 		{   
-			// 			target_adjust_x = 0.0;
-			// 			y = -0.65;
-			// 			target_adjust_z = 0.0;
-			// 		}
-			// 		break;
-			// 	}
-			// 	case 9: // 火腿
-			// 	{
-			// 		if (y < -0.68) // too far
-			// 		{
-			// 			target_adjust_x = 0.0;
-			// 			y = -0.65;
-			// 			// target_adjust_z = 0.0;
-			// 		}
-			// 		if (y > -0.58) // too close
-			// 		{   
-			// 			target_adjust_x = 0.0;
-			// 			y = -0.65;
-			// 			// target_adjust_z = 0.0;
-			// 		}
-			// 		target_adjust_z = -0.03;
-			// 		break;
-			// 	}
-			// 	case 18: // 香水
-			// 	{
-			// 		if (y < -0.7) // too far
-			// 		{
-			// 			target_adjust_x = 0.0;
-			// 			y = -0.68;
-			// 			target_adjust_z = 0.0;
-			// 		}
-			// 		if (y > -0.58) // too close
-			// 		{   
-			// 			target_adjust_x = 0.0;
-			// 			y = -0.68;
-			// 			target_adjust_z = 0.0;
-			// 		}
-			// 		break;
-			// 	}
-			// 	case 12: // 牛奶
-			// 	{
-			// 		if (y < -0.7) // too far
-			// 		{
-			// 			target_adjust_x = 0.01;
-			// 			y = -0.68;
-			// 			target_adjust_z = 0.0;
-			// 		}
-			// 		if (y > -0.58) // too close
-			// 		{   
-			// 			target_adjust_x = 0.01;
-			// 			y = -0.68;
-			// 			target_adjust_z = 0.0;
-			// 		}
-			// 		break;
-			// 	}
-			// 	case 0: // 书
-			// 	{
-			// 		if (y < -0.75) // too far
-			// 		{
-			// 			target_adjust_x = 0.0;
-			// 			y = -0.7;
-			// 			target_adjust_z = 0.0;
-			// 		}
-			// 		if (y > -0.58) // too close
-			// 		{   
-			// 			target_adjust_x = 0.0;
-			// 			y = -0.7;
-			// 			target_adjust_z = 0.0;
-			// 		}
-			// 		break;
-			// 	}
-			// 	case 13: // 果冻
-			// 	{
-			// 		if (y < -0.7) // too far
-			// 		{
-			// 			target_adjust_x = 0.02;
-			// 			y = -0.68;
-			// 			target_adjust_z = 0.0;
-			// 		}
-			// 		if (y > -0.58) // too close
-			// 		{   
-			// 			target_adjust_x = 0.02;
-			// 			y = -0.68;
-			// 			target_adjust_z = 0.0;
-			// 		}
-			// 		break;
-			// 	}
-			// 	case 11: // 磨牙棒
-			// 	{
-			// 		if (y < -0.7) // too far
-			// 		{
-			// 			target_adjust_x = 0.0;
-			// 			y = -0.68;
-			// 			// target_adjust_z = -0.02;
-			// 		}
-			// 		if (y > -0.58) // too close
-			// 		{   
-			// 			target_adjust_x = 0.0;
-			// 			y = -0.65;
-			// 			// target_adjust_z = -0.02;
-			// 		}
-			// 		target_adjust_z = -0.03;  
-			// 		break;
-			// 	}
-			// 	case 16: // 水杯
-			// 	{
-			// 		if (y < -0.7) // too far
-			// 		{
-			// 			target_adjust_x = 0.02;
-			// 			y = -0.68;
-			// 			target_adjust_z = 0.0;
-			// 		}
-			// 		if (y > -0.58) // too close
-			// 		{   
-			// 			target_adjust_x = 0.02;
-			// 			y = -0.68;
-			// 			target_adjust_z = 0.0;
-			// 		}
-			// 		break;
-			// 	}
-			// }
+			
 			// TODO
 			// correction for z axis
 			if (z < (DESK_HEIGHT_MIDDLE - 0.1)) // 0.6 - 0.41 = 0.19
@@ -1008,4 +880,5 @@ int main(int argc, char **argv)
 /********************* functions ******************************/
 
 void sweep() {}
-void suck() {}
+void suck() {}.0;						
+						// y -= 0.05;

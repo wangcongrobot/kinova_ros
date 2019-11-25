@@ -30,7 +30,7 @@
 // custom
 #include "jrc18sia_motion_planner/jrc18sia_kinematics_parser.h"
 
-#define DEBUG_PRINT false
+#define DEBUG_PRINT true
 #define CONFIRM_ACT true
 #define TRAJECTORY_VELOCITY_SCALING 1.0 // trajectory_velocity_scaling_;
 #define MAX_PLAN_STEP 30 // max_plan_steps_
@@ -100,6 +100,8 @@ public:
 
   /** \brief  Set joint index and relative joint values to move */
   void setJointValueTarget(const int joint_index, const double joint_values);
+
+  void setAbsoluteJointValueTarget(const int joint_index, const double joint_values);
 
   /** \brief  Get current joint values from the topic "joint_states" */
   std::vector<double> getCurrentJointState();
